@@ -42,22 +42,19 @@ const OTPLoginScreen = ({ navigation }: Props) => {
     <ScreenShell
       topColor={Colors.bgWhite}
       bottomColor={Colors.bgWhite}
-      backgroundColor={Colors.bgWhite}
-    >
+      backgroundColor={Colors.bgWhite}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView
           contentContainerStyle={styles.scroll}
-          keyboardShouldPersistTaps="handled"
-        >
+          keyboardShouldPersistTaps="handled">
+
           {/* Back */}
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-          >
+            activeOpacity={0.7}>
             <Text style={styles.backIcon}>‹</Text>
           </TouchableOpacity>
 
@@ -82,7 +79,7 @@ const OTPLoginScreen = ({ navigation }: Props) => {
               placeholder="98300 12428"
               placeholderTextColor={Colors.textTertiary}
               keyboardType="phone-pad"
-              maxLength={10} // 10 digits + optional space
+              maxLength={11}   // 10 digits + optional space
               autoFocus
             />
           </View>

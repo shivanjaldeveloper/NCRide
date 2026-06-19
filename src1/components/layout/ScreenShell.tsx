@@ -40,10 +40,7 @@ const ScreenShell = ({
     <View style={[styles.root, { backgroundColor }, style]}>
       <TopSafeStrap backgroundColor={topColor} barStyle={topBarStyle} />
       <View style={styles.body}>{children}</View>
-      <BottomSafeStrap
-        backgroundColor={bottomColor}
-        darkIcons={bottomDarkIcons}
-      />
+      <BottomSafeStrap backgroundColor={bottomColor} darkIcons={bottomDarkIcons} />
     </View>
   );
 };

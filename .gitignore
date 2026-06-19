@@ -22,6 +22,9 @@ DerivedData
 *.xcuserstate
 **/.xcode.env.local
 
+# Ignore zip files
+*.zip
+
 # Android/IntelliJ
 #
 build/

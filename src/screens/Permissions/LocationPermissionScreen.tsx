@@ -1,12 +1,20 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
+  ActivityIndicator,
   Platform,
-  PermissionsAndroid,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import {
+  request,
+  PERMISSIONS,
+  RESULTS,
+  openSettings,
+} from 'react-native-permissions';
+import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
+
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
 import { NCButton } from '../../components/common';
@@ -22,67 +30,137 @@ import {
 type Props = NativeStackScreenProps<RootStackParamList, 'LocationPermission'>;
 
 const FEATURES = [
-  { icon: '📍', title: 'Precise pickup', sub: 'Saves you time on every ride' },
-  { icon: '🗺️', title: 'Live trip tracking', sub: 'Share with friends & family' },
-  { icon: '🆘', title: 'SOS in 1 tap', sub: 'Send live location to emergency contacts' },
+  {
+    icon: '📍',
+    title: 'Precise pickup',
+    sub: 'Saves you time on every ride',
+  },
+  {
+    icon: '🗺️',
+    title: 'Live trip tracking',
+    sub: 'Share with friends & family',
+  },
+  {
+    icon: '🆘',
+    title: 'SOS in 1 tap',
+    sub: 'Send live location to emergency contacts',
+  },
 ];
 
+const DEFAULT_REGION = {
+  latitude: 28.6139,
+  longitude: 77.209,
+  latitudeDelta: 0.05,
+  longitudeDelta: 0.05,
+};
+
 const LocationPermissionScreen = ({ navigation }: Props) => {
-  const requestPermission = async () => {
-    if (Platform.OS === 'android') {
-      await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      );
+  const [loading, setLoading] = useState(true);
+  const [locationGranted, setLocationGranted] = useState(false);
+  const mapRef = useRef<MapView>(null);
+
+  useEffect(() => {
+    requestLocation();
+  }, []);
+
+  const requestLocation = async () => {
+    try {
+      setLoading(true);
+
+      const permission =
+        Platform.OS === 'android'
+          ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
+          : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
+
+      const result = await request(permission);
+
+      if (result === RESULTS.GRANTED) {
+        setLocationGranted(true);
+        setLoading(false);
+      } else if (result === RESULTS.BLOCKED) {
+        setLoading(false);
+        setLocationGranted(false);
+        openSettings();
+      } else {
+        setLoading(false);
+        setLocationGranted(false);
+      }
+    } catch (e) {
+      console.log(e);
+      setLoading(false);
     }
-    // On iOS this is handled by Info.plist NSLocationWhenInUseUsageDescription
-    // For production use react-native-permissions for full cross-platform control
-    navigation.replace('HomeTabs');
   };
 
-  const handleSkip = () => {
-    navigation.replace('HomeTabs');
+  const onUserLocationChange = (event: any) => {
+    const { coordinate } = event.nativeEvent;
+    if (coordinate && mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: coordinate.latitude,
+          longitude: coordinate.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        1000,
+      );
+    }
   };
 
   return (
     <ScreenShell
       topColor={Colors.bgOffWhite}
       bottomColor={Colors.bgOffWhite}
-      backgroundColor={Colors.bgOffWhite}>
+      backgroundColor={Colors.bgOffWhite}
+    >
       <View style={styles.container}>
-
-        {/* Map illustration */}
-        <View style={styles.mapWrap}>
-          <View style={styles.mapCard}>
-            {/* Road grid */}
-            <View style={styles.roadH} />
-            <View style={[styles.roadH, { top: '60%' }]} />
-            <View style={styles.roadV} />
-            <View style={[styles.roadV, { left: '65%' }]} />
-            {/* Pin */}
-            <View style={styles.pinRipple} />
-            <View style={styles.pin}>
-              <Text style={styles.pinDot}>📍</Text>
+        <View style={styles.mapContainer}>
+          {loading ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={Colors.primary} />
+              <Text style={styles.statusText}>Fetching your location...</Text>
             </View>
-          </View>
+          ) : !locationGranted ? (
+            <View style={styles.center}>
+              <Text style={styles.bigEmoji}>📍</Text>
+              <Text style={styles.successTitle}>
+                Location Permission Required
+              </Text>
+              <Text style={styles.coord}>
+                Enable location access to continue.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.mapWrapper}>
+              <MapView
+                ref={mapRef}
+                provider={PROVIDER_GOOGLE}
+                style={styles.map}
+                initialRegion={DEFAULT_REGION}
+                showsUserLocation={true}
+                showsMyLocationButton={false}
+                followsUserLocation={true}
+                onUserLocationChange={onUserLocationChange}
+              />
+            </View>
+          )}
         </View>
 
-        {/* Copy */}
         <Text style={styles.heading}>Allow precise location</Text>
+
         <Text style={styles.body}>
-          NCRide uses your location to find the closest driver, accurate pickup,
-          and live trip tracking. You can change this in Settings.
+          NCRide uses your location to find nearby drivers, accurate pickup
+          points, and live trip tracking.
         </Text>
 
-        {/* Feature list */}
         <View style={styles.featureList}>
-          {FEATURES.map(f => (
-            <View key={f.title} style={styles.featureRow}>
+          {FEATURES.map(item => (
+            <View key={item.title} style={styles.featureRow}>
               <View style={styles.featureIcon}>
-                <Text style={styles.featureEmoji}>{f.icon}</Text>
+                <Text>{item.icon}</Text>
               </View>
-              <View>
-                <Text style={styles.featureTitle}>{f.title}</Text>
-                <Text style={styles.featureSub}>{f.sub}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.featureTitle}>{item.title}</Text>
+                <Text style={styles.featureSub}>{item.sub}</Text>
               </View>
             </View>
           ))}
@@ -90,9 +168,14 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
 
         <View style={{ flex: 1 }} />
 
-        <NCButton label="Allow precise location" onPress={requestPermission} />
-        <View style={styles.gapSm} />
-        <NCButton label="Maybe later" onPress={handleSkip} variant="outline" />
+        {!locationGranted ? (
+          <NCButton label="Enable Location" onPress={requestLocation} />
+        ) : (
+          <NCButton
+            label="Continue"
+            onPress={() => navigation.replace('HomeTabs')}
+          />
+        )}
       </View>
     </ScreenShell>
   );
@@ -104,50 +187,46 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.screen,
     paddingBottom: vscale(32),
   },
-
-  mapWrap: { marginTop: vscale(16), marginBottom: vscale(28) },
-  mapCard: {
-    height: vscale(200),
+  mapContainer: {
+    height: vscale(260),
+    marginTop: vscale(16),
+    marginBottom: vscale(24),
     borderRadius: Radii.xl,
-    backgroundColor: Colors.mapBlue,
     overflow: 'hidden',
-    position: 'relative',
+    backgroundColor: '#F4F4F4',
   },
-  roadH: {
-    position: 'absolute',
-    top: '35%',
-    left: 0,
-    right: 0,
-    height: fscale(14),
-    backgroundColor: Colors.mapRoad,
-    opacity: 0.7,
+  mapWrapper: {
+    flex: 1,
+    borderRadius: Radii.xl,
+    overflow: 'hidden',
   },
-  roadV: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: '35%',
-    width: fscale(14),
-    backgroundColor: Colors.mapRoad,
-    opacity: 0.7,
+  map: {
+    flex: 1,
   },
-  pinRipple: {
-    position: 'absolute',
-    top: '20%',
-    left: '38%',
-    width: fscale(60),
-    height: fscale(60),
-    borderRadius: fscale(30),
-    backgroundColor: Colors.blue,
-    opacity: 0.18,
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
   },
-  pin: {
-    position: 'absolute',
-    top: '28%',
-    left: '46%',
+  statusText: {
+    marginTop: 12,
+    ...Typography.body,
+    color: Colors.textSecondary,
   },
-  pinDot: { fontSize: fscale(24) },
-
+  bigEmoji: {
+    fontSize: 56,
+    marginBottom: 12,
+  },
+  successTitle: {
+    ...Typography.h3,
+    textAlign: 'center',
+  },
+  coord: {
+    marginTop: 8,
+    textAlign: 'center',
+    color: Colors.textSecondary,
+  },
   heading: {
     ...Typography.h2,
     color: Colors.textPrimary,
@@ -156,28 +235,30 @@ const styles = StyleSheet.create({
   body: {
     ...Typography.body,
     color: Colors.textSecondary,
-    marginBottom: vscale(24),
+    marginBottom: 24,
   },
-
-  featureList: { gap: Spacing.md },
+  featureList: {},
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
+    marginBottom: 16,
   },
   featureIcon: {
-    width: fscale(36),
-    height: fscale(36),
-    borderRadius: Radii.sm,
+    width: fscale(42),
+    height: fscale(42),
+    borderRadius: Radii.md,
     backgroundColor: Colors.pillBg,
-    alignItems: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  featureEmoji: { fontSize: fscale(18) },
-  featureTitle: { ...Typography.h4, color: Colors.textPrimary },
-  featureSub: { ...Typography.caption, color: Colors.textSecondary },
-
-  gapSm: { height: Spacing.sm },
+  featureTitle: {
+    ...Typography.h4,
+  },
+  featureSub: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+  },
 });
 
 export default LocationPermissionScreen;

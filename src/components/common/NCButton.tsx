@@ -7,65 +7,135 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { Colors, Typography, Radii, fscale } from '../../theme';
+import { Colors, fscale } from '../../theme';
+import Icon from './Icon';
+import { IconName } from './iconPaths';
 
-type Variant = 'primary' | 'outline' | 'ghost';
+export type NCButtonVariant =
+  | 'primary'
+  | 'accent'
+  | 'blue'
+  | 'glass'
+  | 'ghost'
+  | 'danger'
+  // Legacy alias kept for screens not yet ported to the new design pass
+  // (Phase 1 will replace these call sites and this alias can be removed).
+  | 'outline';
+
+export type NCButtonSize = 'sm' | 'md' | 'lg';
 
 interface Props {
   label: string;
   onPress: () => void;
-  variant?: Variant;
+  variant?: NCButtonVariant;
+  size?: NCButtonSize;
+  icon?: IconName | string;
+  iconRight?: IconName | string;
   loading?: boolean;
   disabled?: boolean;
-  rightIcon?: React.ReactNode;
   style?: ViewStyle;
   textStyle?: TextStyle;
   fullWidth?: boolean;
 }
 
+// Matches the reference Btn's `sizes` map (h / px / fs / r).
+const SIZES: Record<
+  NCButtonSize,
+  { h: number; px: number; fs: number; r: number }
+> = {
+  sm: { h: fscale(36), px: fscale(14), fs: fscale(14), r: fscale(12) },
+  md: { h: fscale(48), px: fscale(18), fs: fscale(15), r: fscale(14) },
+  lg: { h: fscale(56), px: fscale(22), fs: fscale(16), r: fscale(18) },
+};
+
+// Matches the reference Btn's `variants` map (bg / color / border / shadow).
+const VARIANTS: Record<
+  NCButtonVariant,
+  { bg: string; color: string; border?: { width: number; color: string } }
+> = {
+  primary: { bg: Colors.ink, color: '#FFFFFF' },
+  accent: { bg: Colors.lime, color: Colors.ink },
+  blue: { bg: Colors.blue, color: '#FFFFFF' },
+  glass: {
+    bg: 'rgba(255,255,255,0.7)',
+    color: Colors.ink,
+    border: { width: 0.5, color: 'rgba(15,17,21,0.08)' },
+  },
+  ghost: {
+    bg: 'transparent',
+    color: Colors.ink,
+    border: { width: 1, color: 'rgba(15,17,21,0.12)' },
+  },
+  outline: {
+    bg: 'transparent',
+    color: Colors.ink,
+    border: { width: 1.5, color: Colors.border },
+  },
+  danger: { bg: Colors.red, color: '#FFFFFF' },
+};
+
+/**
+ * NCButton
+ * RN port of the design reference's `Btn` component. Same variant/size
+ * vocabulary so screens map 1:1 from the mock.
+ */
 const NCButton = ({
   label,
   onPress,
   variant = 'primary',
+  size = 'md',
+  icon,
+  iconRight,
   loading = false,
   disabled = false,
-  rightIcon,
   style,
   textStyle,
   fullWidth = true,
 }: Props) => {
-  const isPrimary = variant === 'primary';
-  const isOutline = variant === 'outline';
+  const s = SIZES[size];
+  const v = VARIANTS[variant];
 
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
       style={[
         styles.base,
-        fullWidth && styles.full,
-        isPrimary && styles.primary,
-        isOutline && styles.outline,
-        variant === 'ghost' && styles.ghost,
-        (disabled || loading) && styles.disabled,
+        {
+          height: s.h,
+          paddingHorizontal: s.px,
+          borderRadius: s.r,
+          backgroundColor: v.bg,
+          borderWidth: v.border?.width ?? 0,
+          borderColor: v.border?.color,
+          width: fullWidth ? '100%' : undefined,
+          opacity: disabled ? 0.5 : 1,
+        },
+        variant !== 'ghost' &&
+          variant !== 'glass' &&
+          variant !== 'outline' &&
+          styles.shadow,
         style,
-      ]}>
+      ]}
+    >
       {loading ? (
-        <ActivityIndicator color={isPrimary ? Colors.textInverse : Colors.primary} size="small" />
+        <ActivityIndicator color={v.color} size="small" />
       ) : (
         <>
+          {icon && <Icon name={icon} size={18} stroke={v.color} sw={1.8} />}
           <Text
             style={[
               styles.label,
-              isPrimary && styles.labelPrimary,
-              isOutline && styles.labelOutline,
-              variant === 'ghost' && styles.labelGhost,
+              { color: v.color, fontSize: s.fs },
               textStyle,
-            ]}>
+            ]}
+          >
             {label}
           </Text>
-          {rightIcon && rightIcon}
+          {iconRight && (
+            <Icon name={iconRight} size={18} stroke={v.color} sw={1.8} />
+          )}
         </>
       )}
     </TouchableOpacity>
@@ -74,27 +144,22 @@ const NCButton = ({
 
 const styles = StyleSheet.create({
   base: {
-    height: fscale(52),
-    borderRadius: Radii.pill,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: fscale(8),
-    paddingHorizontal: fscale(24),
   },
-  full: { width: '100%' },
-  primary: { backgroundColor: Colors.primary },
-  outline: {
-    backgroundColor: Colors.transparent,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+  shadow: {
+    shadowColor: '#0F1115',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 14,
+    elevation: 5,
   },
-  ghost: { backgroundColor: Colors.transparent },
-  disabled: { opacity: 0.45 },
-  label: { ...Typography.button },
-  labelPrimary: { color: Colors.textInverse },
-  labelOutline: { color: Colors.textPrimary },
-  labelGhost: { color: Colors.textPrimary },
+  label: {
+    fontWeight: '600',
+    letterSpacing: -0.1,
+  },
 });
 
 export default NCButton;
