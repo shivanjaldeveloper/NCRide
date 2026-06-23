@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     paddingHorizontal: Spacing.screen,
-    paddingBottom: vscale(44),
+    paddingBottom: vscale(5),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

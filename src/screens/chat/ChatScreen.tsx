@@ -63,7 +63,7 @@ const ChatScreen = ({ navigation }: Props) => {
       >
         <HeaderBack
           title="Rajat Kr. Saha"
-          sub="DL 5C NC 4421 · Maruti Dzire"
+          sub="DL 5C NC 4421 · Auto Rickshaw"
           onBack={() => navigation.goBack()}
           right={
             <TouchableOpacity style={styles.callBtn} activeOpacity={0.8}>

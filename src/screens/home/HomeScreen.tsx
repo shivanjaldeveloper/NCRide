@@ -9,11 +9,14 @@ import {
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ScreenShell } from '../../components/layout';
+import { TopSafeStrap } from '../../components/layout';
 import { Icon } from '../../components/common';
 import { MapView } from '../../components/map';
 import type { IconName } from '../../components/common';
-import type { HomeTabParamList, RootStackParamList } from '../../navigation/types';
+import type {
+  HomeTabParamList,
+  RootStackParamList,
+} from '../../navigation/types';
 import {
   Colors,
   Typography,
@@ -30,30 +33,33 @@ type Props = CompositeScreenProps<
 >;
 
 // ─── Service grid data ─────────────────────────────────────────────────────
-const SERVICES: { id: string; icon: IconName; label: string; sub: string; bg: string }[] = [
-  { id: 'car', icon: 'car', label: 'Car', sub: 'Mini to XL', bg: '#EAF1FF' },
-  { id: 'bike', icon: 'bike', label: 'Bike', sub: 'Fastest', bg: '#E6F9EC' },
-  { id: 'auto', icon: 'taxi', label: 'Auto', sub: 'Nimble', bg: '#FEF6E4' },
+const SERVICES: {
+  id: string;
+  icon: IconName;
+  label: string;
+  sub: string;
+  bg: string;
+}[] = [
   {
-    id: 'erick',
+    id: 'auto',
+    icon: 'taxi',
+    label: 'Auto',
+    sub: 'Quick & nimble',
+    bg: '#FEF6E4',
+  },
+  {
+    id: 'erickshaw',
     icon: 'car',
     label: 'E-Rickshaw',
     sub: 'Eco ride',
-    bg: '#EAF1FF',
+    bg: '#E0FAFD',
   },
   {
-    id: 'reserve',
-    icon: 'reserve',
-    label: 'Reserve',
-    sub: 'Schedule',
-    bg: '#F3EEFF',
-  },
-  {
-    id: 'intercity',
-    icon: 'intercity',
-    label: 'Intercity',
-    sub: 'Outstation',
-    bg: '#FFE9E9',
+    id: 'courier',
+    icon: 'courier',
+    label: 'Courier',
+    sub: 'Same-city parcel',
+    bg: '#FFE9DC',
   },
 ];
 
@@ -68,27 +74,27 @@ const RECENT_RIDES: {
 }[] = [
   {
     id: '1',
-    icon: 'car',
+    icon: 'taxi',
     from: 'Sector 62',
     to: 'Connaught Place',
-    fare: '₹284',
-    type: 'NCRide Mini · Yesterday',
+    fare: '₹110',
+    type: 'Auto · Yesterday',
   },
   {
     id: '2',
-    icon: 'bike',
+    icon: 'car',
     from: 'Sector 18',
     to: 'Botanical Garden Metro',
-    fare: '₹72',
-    type: 'Bike Taxi · 2 days ago',
+    fare: '₹45',
+    type: 'E-Rickshaw · 2 days ago',
   },
   {
     id: '3',
-    icon: 'car',
+    icon: 'taxi',
     from: 'Noida Sector 16',
     to: 'India Gate',
-    fare: '₹448',
-    type: 'NCRide Sedan · 5 days ago',
+    fare: '₹96',
+    type: 'Auto · 5 days ago',
   },
 ];
 
@@ -158,15 +164,20 @@ const RideRow = ({
 
 // ─── Home Screen ───────────────────────────────────────────────────────────
 const HomeScreen = ({ navigation }: Props) => {
-  const goRide = (mode?: 'ride' | 'cab' | 'bike' | 'reserve' | 'intercity') =>
+  const goRide = (mode: 'auto' | 'erickshaw') =>
     navigation.getParent()?.navigate('Ride' as never, { mode } as never);
+  const goCourier = () => navigation.getParent()?.navigate('Courier' as never);
 
   return (
-    <ScreenShell
-      topColor={Colors.bgOffWhite}
-      bottomColor={Colors.bgOffWhite}
-      backgroundColor={Colors.bgOffWhite}
-    >
+    // Root fills the full screen. The bottom tab bar is drawn by the navigator
+    // OUTSIDE this screen, so we must NOT add BottomSafeStrap here — doing so
+    // would create a double gap above the tab bar.
+    <View style={{ flex: 1, backgroundColor: Colors.bgOffWhite }}>
+      <TopSafeStrap
+        backgroundColor={Colors.bgOffWhite}
+        barStyle="dark-content"
+      />
+
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -197,7 +208,12 @@ const HomeScreen = ({ navigation }: Props) => {
         <TouchableOpacity style={styles.locationPill} activeOpacity={0.8}>
           <Icon name="locate" size={12} stroke={Colors.blue} sw={2} />
           <Text style={styles.locationText}>Sector 62, Noida</Text>
-          <Icon name="chevronDown" size={12} stroke={Colors.textSecondary} sw={2} />
+          <Icon
+            name="chevronDown"
+            size={12}
+            stroke={Colors.textSecondary}
+            sw={2}
+          />
         </TouchableOpacity>
 
         {/* ── Search / Map card ── */}
@@ -206,7 +222,7 @@ const HomeScreen = ({ navigation }: Props) => {
           <TouchableOpacity
             style={styles.searchRow}
             activeOpacity={0.8}
-            onPress={() => goRide('ride')}
+            onPress={() => goRide('auto')}
           >
             <View style={styles.searchIconWrap}>
               <Icon name="search" size={17} stroke="#fff" sw={1.8} />
@@ -214,11 +230,16 @@ const HomeScreen = ({ navigation }: Props) => {
             <View style={styles.searchTextWrap}>
               <Text style={styles.searchLabel}>Where to?</Text>
               <Text style={styles.searchHint}>
-                Connaught Place · 38 min by car
+                Connaught Place · 26 min by auto
               </Text>
             </View>
             <TouchableOpacity style={styles.laterBtn} activeOpacity={0.7}>
-              <Icon name="clock" size={12} stroke={Colors.textSecondary} sw={2} />
+              <Icon
+                name="clock"
+                size={12}
+                stroke={Colors.textSecondary}
+                sw={2}
+              />
               <Text style={styles.laterText}>Later</Text>
             </TouchableOpacity>
           </TouchableOpacity>
@@ -247,19 +268,18 @@ const HomeScreen = ({ navigation }: Props) => {
             {/* Book overlay */}
             <View style={styles.bookOverlay}>
               <View style={styles.bookOverlayLeft}>
-                {/* Route icon */}
                 <View style={styles.routeIconWrap}>
                   <Icon name="route" size={15} stroke={Colors.green} sw={2} />
                 </View>
                 <View>
                   <Text style={styles.routeLabel}>Suggested route</Text>
-                  <Text style={styles.routeMeta}>38 min · ₹228</Text>
+                  <Text style={styles.routeMeta}>26 min · ₹96</Text>
                 </View>
               </View>
               <TouchableOpacity
                 style={styles.bookBtn}
                 activeOpacity={0.85}
-                onPress={() => goRide('ride')}
+                onPress={() => goRide('auto')}
               >
                 <Text style={styles.bookBtnText}>Book →</Text>
               </TouchableOpacity>
@@ -270,9 +290,9 @@ const HomeScreen = ({ navigation }: Props) => {
         {/* ── Services ── */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>SERVICES</Text>
-          <TouchableOpacity activeOpacity={0.7}>
+          {/* <TouchableOpacity activeOpacity={0.7}>
             <Text style={styles.seeAll}>See all</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
         </View>
 
         <View style={styles.servicesGrid}>
@@ -284,17 +304,9 @@ const HomeScreen = ({ navigation }: Props) => {
               sub={s.sub}
               bg={s.bg}
               onPress={() =>
-                goRide(
-                  s.id === 'bike'
-                    ? 'bike'
-                    : s.id === 'reserve'
-                    ? 'reserve'
-                    : s.id === 'intercity'
-                    ? 'intercity'
-                    : s.id === 'car' || s.id === 'erick'
-                    ? 'cab'
-                    : 'ride',
-                )
+                s.id === 'courier'
+                  ? goCourier()
+                  : goRide(s.id === 'erickshaw' ? 'erickshaw' : 'auto')
               }
             />
           ))}
@@ -374,7 +386,7 @@ const HomeScreen = ({ navigation }: Props) => {
           ))}
         </View>
       </ScrollView>
-    </ScreenShell>
+    </View>
   );
 };
 
@@ -503,7 +515,6 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-
   zoomControls: {
     position: 'absolute',
     right: Spacing.sm,
@@ -530,7 +541,6 @@ const styles = StyleSheet.create({
     fontWeight: '400',
     lineHeight: fscale(22),
   },
-
   bookOverlay: {
     position: 'absolute',
     bottom: Spacing.sm,

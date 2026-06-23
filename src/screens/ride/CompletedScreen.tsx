@@ -97,7 +97,7 @@ const CompletedScreen = ({ navigation }: Props) => {
               </View>
               <View>
                 <Text style={styles.driverName}>Rajat Kr. Saha</Text>
-                <Text style={styles.driverCar}>Maruti Swift Dzire</Text>
+                <Text style={styles.driverCar}>Auto Rickshaw</Text>
               </View>
             </View>
 
@@ -149,7 +149,7 @@ const CompletedScreen = ({ navigation }: Props) => {
               <NCButton
                 label="Invoice"
                 icon="invoice"
-                onPress={() => {}}
+                onPress={() => navigation.navigate('Invoice')}
                 variant="glass"
                 size="lg"
               />
@@ -158,7 +158,7 @@ const CompletedScreen = ({ navigation }: Props) => {
               <NCButton
                 label="Continue to pay"
                 iconRight="arrowRight"
-                onPress={() => {}}
+                onPress={() => navigation.navigate('Invoice')}
                 variant="primary"
                 size="lg"
               />

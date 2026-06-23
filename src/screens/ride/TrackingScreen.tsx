@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../../navigation/types';
-import { HeaderBack, Sheet } from '../../components/layout';
+import { HeaderBack, Sheet, TopSafeStrap } from '../../components/layout';
 import { NCButton, Icon } from '../../components/common';
 import { MapView } from '../../components/map';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
@@ -19,7 +18,6 @@ const STEPS = [
 ];
 
 const TrackingScreen = ({ navigation }: Props) => {
-  const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
 
   useEffect(() => {
@@ -29,6 +27,30 @@ const TrackingScreen = ({ navigation }: Props) => {
 
   return (
     <View style={styles.root}>
+      {/* Solid strap — same as RideScreen */}
+      <TopSafeStrap
+        backgroundColor={Colors.bgOffWhite}
+        barStyle="dark-content"
+      />
+
+      {/* Header in normal flow — same as RideScreen */}
+      <HeaderBack
+        title="Live trip"
+        sub="ETA · 9 min"
+        onBack={() => navigation.goBack()}
+        right={
+          <TouchableOpacity
+            style={styles.sosBtn}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('SOS')}
+          >
+            <Icon name="sos" size={14} stroke="#fff" sw={2} />
+            <Text style={styles.sosText}>SOS</Text>
+          </TouchableOpacity>
+        }
+      />
+
+      {/* Map absolute full-bleed behind sheet */}
       <View style={styles.mapArea}>
         <MapView
           height={400}
@@ -40,24 +62,7 @@ const TrackingScreen = ({ navigation }: Props) => {
         />
       </View>
 
-      <View style={[styles.headerOverlay, { paddingTop: insets.top }]}>
-        <HeaderBack
-          title="Live trip"
-          sub="ETA · 9 min"
-          onBack={() => navigation.goBack()}
-          right={
-            <TouchableOpacity
-              style={styles.sosBtn}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate('SOS')}
-            >
-              <Icon name="sos" size={14} stroke="#fff" sw={2} />
-              <Text style={styles.sosText}>SOS</Text>
-            </TouchableOpacity>
-          }
-        />
-      </View>
-
+      {/* Sheet anchored at bottom */}
       <View style={styles.sheetWrap}>
         <Sheet>
           <View style={styles.driverRow}>
@@ -65,7 +70,7 @@ const TrackingScreen = ({ navigation }: Props) => {
               <Text style={styles.avatarText}>RK</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.driverName}>Rajat · Maruti Swift Dzire</Text>
+              <Text style={styles.driverName}>Rajat · Auto Rickshaw</Text>
               <Text style={styles.driverMeta}>DL 5C NC 4421 · ★ 4.92</Text>
             </View>
             <TouchableOpacity style={styles.iconBtn} activeOpacity={0.8}>
@@ -86,8 +91,15 @@ const TrackingScreen = ({ navigation }: Props) => {
               const active = i === step;
               return (
                 <View key={s} style={styles.stepRow}>
-                  <View style={[styles.stepDot, (done || active) && styles.stepDotActive]}>
-                    {done && <Icon name="check" size={14} stroke="#fff" sw={2.4} />}
+                  <View
+                    style={[
+                      styles.stepDot,
+                      (done || active) && styles.stepDotActive,
+                    ]}
+                  >
+                    {done && (
+                      <Icon name="check" size={14} stroke="#fff" sw={2.4} />
+                    )}
                     {active && <View style={styles.stepPulse} />}
                   </View>
                   <Text
@@ -107,7 +119,13 @@ const TrackingScreen = ({ navigation }: Props) => {
 
           <View style={styles.bottomRow}>
             <View style={{ flex: 1 }}>
-              <NCButton label="Share live" icon="link" onPress={() => {}} variant="glass" size="md" />
+              <NCButton
+                label="Share live"
+                icon="link"
+                onPress={() => {}}
+                variant="glass"
+                size="md"
+              />
             </View>
             <View style={{ flex: 1 }}>
               <NCButton
@@ -128,15 +146,10 @@ const TrackingScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.bgOffWhite },
   mapArea: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '62%',
+    height: '38%',
     overflow: 'hidden',
   },
   mapFill: { borderRadius: 0, width: '100%', height: '100%' },
-  headerOverlay: { position: 'absolute', top: 0, left: 0, right: 0 },
   sosBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -147,7 +160,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.red,
   },
   sosText: { fontSize: fscale(12), fontWeight: '700', color: '#fff' },
-  sheetWrap: { position: 'absolute', bottom: 0, left: 0, right: 0 },
+  sheetWrap: {
+    flex: 1,
+  },
 
   driverRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   avatarWrap: {
@@ -160,7 +175,11 @@ const styles = StyleSheet.create({
   },
   avatarText: { fontSize: fscale(14), fontWeight: '700', color: '#fff' },
   driverName: { fontSize: fscale(14), fontWeight: '700', color: Colors.ink },
-  driverMeta: { fontSize: fscale(11.5), color: Colors.textSecondary, marginTop: 1 },
+  driverMeta: {
+    fontSize: fscale(11.5),
+    color: Colors.textSecondary,
+    marginTop: 1,
+  },
   iconBtn: {
     width: fscale(40),
     height: fscale(40),
@@ -169,7 +188,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   stepsWrap: { marginTop: Spacing.md },
   stepRow: {
     flexDirection: 'row',
@@ -200,8 +218,12 @@ const styles = StyleSheet.create({
   },
   stepTextActive: { color: Colors.ink },
   stepTextCurrent: { fontWeight: '700' },
-  stepNow: { marginLeft: 'auto', fontSize: fscale(11), color: Colors.green, fontWeight: '700' },
-
+  stepNow: {
+    marginLeft: 'auto',
+    fontSize: fscale(11),
+    color: Colors.green,
+    fontWeight: '700',
+  },
   bottomRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
 });
 

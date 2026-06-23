@@ -1,10 +1,13 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { HomeTabParamList } from './types';
 import HomeScreen from '../screens/home/HomeScreen';
-import { Colors, Typography, fscale, Spacing } from '../theme';
+import { Colors, Typography, fscale } from '../theme';
+
+import { Icon } from '../components/common';
+import type { IconName } from '../components/common';
 
 const Tab = createBottomTabNavigator<HomeTabParamList>();
 
@@ -29,16 +32,12 @@ const PlaceholderScreen = ({ name }: { name: string }) => (
   </View>
 );
 
-const TAB_ITEMS: {
-  key: keyof HomeTabParamList;
-  label: string;
-  icon: string;
-}[] = [
-  { key: 'Home', label: 'Home', icon: '🏠' },
-  { key: 'Activity', label: 'Activity', icon: '📈' },
-  { key: 'Wallet', label: 'Wallet', icon: '💳' },
-  { key: 'Account', label: 'Account', icon: '👤' },
-];
+const TAB_ICONS: Record<keyof HomeTabParamList, IconName> = {
+  Home: 'home',
+  Activity: 'activity',
+  Wallet: 'wallet',
+  Account: 'account',
+};
 
 const HomeTabs = () => {
   const insets = useSafeAreaInsets();
@@ -48,18 +47,23 @@ const HomeTabs = () => {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: true,
+        tabBarPressColor: 'transparent',
+        tabBarPressOpacity: 1,
         tabBarStyle: [
           styles.tabBar,
-          { paddingBottom: Platform.OS === 'ios' ? insets.bottom : Spacing.sm },
+          {
+            height: fscale(60) + insets.bottom,
+            paddingBottom: insets.bottom,
+          },
         ],
-        tabBarIcon: ({ focused }) => {
-          const item = TAB_ITEMS.find(t => t.key === route.name);
-          return (
-            <Text style={{ fontSize: fscale(20), opacity: focused ? 1 : 0.45 }}>
-              {item?.icon}
-            </Text>
-          );
-        },
+        tabBarIcon: ({ focused }) => (
+          <Icon
+            name={TAB_ICONS[route.name as keyof HomeTabParamList]}
+            size={24}
+            stroke={focused ? Colors.textPrimary : Colors.textTertiary}
+            sw={2}
+          />
+        ),
         tabBarLabel: ({ focused, children }) => (
           <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>
             {children}
@@ -87,10 +91,13 @@ const HomeTabs = () => {
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: Colors.bgWhite,
-    borderTopColor: Colors.border,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingTop: Spacing.sm,
-    height: fscale(60) + (Platform.OS === 'android' ? Spacing.sm : 0),
+
+    borderTopWidth: 0,
+
+    elevation: 8,
+    shadowOpacity: 0.08,
+
+    paddingTop: 8,
   },
   tabLabel: {
     ...Typography.caption,

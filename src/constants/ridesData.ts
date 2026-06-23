@@ -1,12 +1,70 @@
 import type { RideOption } from '../components/ride';
 
-// Ported 1:1 from the design reference's `window.RIDE_TYPES` so the ride
-// selection screen draws from the same source of truth as the mock.
-export const RIDE_TYPES: RideOption[] = [
-  { id: 'mini', name: 'NCRide Mini', tag: 'Most affordable', eta: '3 min', fare: 149, max: 4, glyph: 'sedan' },
-  { id: 'sedan', name: 'NCRide Sedan', tag: 'Comfortable', eta: '4 min', fare: 228, max: 4, glyph: 'sedan' },
-  { id: 'prime', name: 'NCRide Prime', tag: 'Top-rated drivers', eta: '6 min', fare: 284, max: 4, glyph: 'sedan' },
-  { id: 'xl', name: 'NCRide XL', tag: 'Groups & luggage', eta: '8 min', fare: 364, max: 6, glyph: 'suv' },
-  { id: 'bike', name: 'Bike Taxi', tag: 'Fastest in traffic', eta: '1 min', fare: 72, max: 1, glyph: 'bike' },
-  { id: 'auto', name: 'Auto Rickshaw', tag: 'Quick & nimble', eta: '2 min', fare: 96, max: 3, glyph: 'auto' },
+// This build only supports Auto and E-Rickshaw bookings — car/bike/reserve/
+// intercity have been dropped. Ported 1:1 from the design reference's
+// `window.AUTO_OPTIONS` / `window.ERICKSHAW_OPTIONS`, reshaped onto the
+// shared `RideOption` type so both flows can reuse RideScreen + RideCard.
+//
+// Mapping notes: the reference's options use `desc` (e.g. "2 min away")
+// instead of a separate eta/tag pair, and have no struck-through "was"
+// fare — RideScreen renders these with `showStrike={false}` on RideCard.
+
+export const AUTO_OPTIONS: RideOption[] = [
+  {
+    id: 'fastest',
+    name: 'Fastest',
+    tag: '2 min away · 3 seats',
+    eta: '',
+    fare: 110,
+    max: 0,
+    glyph: 'auto',
+  },
+  {
+    id: 'lowest',
+    name: 'Lowest fare',
+    tag: '4 min away · 3 seats',
+    eta: '',
+    fare: 88,
+    max: 0,
+    glyph: 'auto',
+  },
+  {
+    id: 'nearby',
+    name: 'Nearby',
+    tag: '1 min away · 3 seats',
+    eta: '',
+    fare: 96,
+    max: 0,
+    glyph: 'auto',
+  },
+];
+
+export const ERICKSHAW_OPTIONS: RideOption[] = [
+  {
+    id: 'sector',
+    name: 'Sector ride',
+    tag: '5 min away · Max 3 km',
+    eta: '',
+    fare: 35,
+    max: 0,
+    glyph: 'erickshaw',
+  },
+  {
+    id: 'metro',
+    name: 'Metro link',
+    tag: '3 min away · To metro',
+    eta: '',
+    fare: 45,
+    max: 0,
+    glyph: 'erickshaw',
+  },
+  {
+    id: 'market',
+    name: 'Market run',
+    tag: '4 min away · Local market',
+    eta: '',
+    fare: 28,
+    max: 0,
+    glyph: 'erickshaw',
+  },
 ];

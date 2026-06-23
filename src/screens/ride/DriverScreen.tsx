@@ -7,11 +7,10 @@ import {
   Animated,
   Easing,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../../navigation/types';
-import { HeaderBack, Sheet } from '../../components/layout';
+import { HeaderBack, Sheet, TopSafeStrap } from '../../components/layout';
 import { NCButton, Icon, Stars } from '../../components/common';
 import { MapView } from '../../components/map';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
@@ -19,8 +18,7 @@ import { Colors, Spacing, fscale, Radii } from '../../theme';
 type Props = NativeStackScreenProps<RootStackParamList, 'Driver'>;
 
 const DriverScreen = ({ navigation }: Props) => {
-  const insets = useSafeAreaInsets();
-  const [eta, setEta] = useState(180); // seconds
+  const [eta, setEta] = useState(180);
   const spin = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -41,10 +39,36 @@ const DriverScreen = ({ navigation }: Props) => {
 
   const min = Math.floor(eta / 60);
   const sec = eta % 60;
-  const spinDeg = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
+  const spinDeg = spin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
     <View style={styles.root}>
+      {/* Solid strap — same as RideScreen */}
+      <TopSafeStrap
+        backgroundColor={Colors.bgOffWhite}
+        barStyle="dark-content"
+      />
+
+      {/* Header in normal flow — same as RideScreen */}
+      <HeaderBack
+        title="Driver assigned"
+        onBack={() => navigation.goBack()}
+        right={
+          <TouchableOpacity
+            style={styles.sosBtn}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('SOS')}
+          >
+            <Icon name="sos" size={14} stroke="#fff" sw={2} />
+            <Text style={styles.sosText}>SOS</Text>
+          </TouchableOpacity>
+        }
+      />
+
+      {/* Map absolute full-bleed behind sheet */}
       <View style={styles.mapArea}>
         <MapView
           height={400}
@@ -56,26 +80,9 @@ const DriverScreen = ({ navigation }: Props) => {
         />
       </View>
 
-      <View style={[styles.headerOverlay, { paddingTop: insets.top }]}>
-        <HeaderBack
-          title="Driver assigned"
-          onBack={() => navigation.goBack()}
-          right={
-            <TouchableOpacity
-              style={styles.sosBtn}
-              activeOpacity={0.85}
-              onPress={() => navigation.navigate('SOS')}
-            >
-              <Icon name="sos" size={14} stroke="#fff" sw={2} />
-              <Text style={styles.sosText}>SOS</Text>
-            </TouchableOpacity>
-          }
-        />
-      </View>
-
+      {/* Sheet anchored at bottom */}
       <View style={styles.sheetWrap}>
         <Sheet>
-          {/* Driver info row */}
           <View style={styles.driverRow}>
             <View style={styles.avatarWrap}>
               <Text style={styles.avatarText}>RK</Text>
@@ -106,10 +113,11 @@ const DriverScreen = ({ navigation }: Props) => {
             </View>
           </View>
 
-          {/* Vehicle + OTP */}
           <View style={styles.vehicleRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.vehicleLabel}>WHITE MARUTI SWIFT DZIRE</Text>
+              <Text style={styles.vehicleLabel}>
+                YELLOW & GREEN AUTO RICKSHAW
+              </Text>
               <Text style={styles.vehiclePlate}>DL 5C NC 4421</Text>
             </View>
             <View style={styles.otpChip}>
@@ -117,9 +125,10 @@ const DriverScreen = ({ navigation }: Props) => {
             </View>
           </View>
 
-          {/* Arriving countdown */}
           <View style={styles.arrivingCard}>
-            <Animated.View style={[styles.spinnerWrap, { transform: [{ rotate: spinDeg }] }]}>
+            <Animated.View
+              style={[styles.spinnerWrap, { transform: [{ rotate: spinDeg }] }]}
+            >
               <Icon name="route" size={20} stroke={Colors.lime} sw={2} />
             </Animated.View>
             <View style={{ flex: 1 }}>
@@ -137,10 +146,15 @@ const DriverScreen = ({ navigation }: Props) => {
             />
           </View>
 
-          {/* Actions */}
           <View style={styles.bottomRow}>
             <View style={{ flex: 1 }}>
-              <NCButton label="Share trip" icon="link" onPress={() => {}} variant="glass" size="md" />
+              <NCButton
+                label="Share trip"
+                icon="link"
+                onPress={() => {}}
+                variant="glass"
+                size="md"
+              />
             </View>
             <View style={{ flex: 1 }}>
               <NCButton
@@ -161,15 +175,10 @@ const DriverScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.bgOffWhite },
   mapArea: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: '58%',
+    height: '38%',
     overflow: 'hidden',
   },
   mapFill: { borderRadius: 0, width: '100%', height: '100%' },
-  headerOverlay: { position: 'absolute', top: 0, left: 0, right: 0 },
   sosBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -180,7 +189,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.red,
   },
   sosText: { fontSize: fscale(12), fontWeight: '700', color: '#fff' },
-  sheetWrap: { position: 'absolute', bottom: 0, left: 0, right: 0 },
+  sheetWrap: {
+    flex: 1,
+  },
 
   driverRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   avatarWrap: {
@@ -203,8 +214,18 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: '#fff',
   },
-  driverName: { fontSize: fscale(15), fontWeight: '700', color: Colors.ink, letterSpacing: -0.2 },
-  ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
+  driverName: {
+    fontSize: fscale(15),
+    fontWeight: '700',
+    color: Colors.ink,
+    letterSpacing: -0.2,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+  },
   ratingMeta: { fontSize: fscale(11.5), color: Colors.textSecondary },
   actionBtns: { flexDirection: 'row', gap: Spacing.sm },
   actionBtnLight: {
@@ -223,7 +244,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
   vehicleRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -252,8 +272,12 @@ const styles = StyleSheet.create({
     borderRadius: Radii.sm,
     backgroundColor: Colors.ink,
   },
-  otpText: { fontSize: fscale(11), fontWeight: '700', color: '#fff', letterSpacing: 1 },
-
+  otpText: {
+    fontSize: fscale(11),
+    fontWeight: '700',
+    color: '#fff',
+    letterSpacing: 1,
+  },
   arrivingCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -278,8 +302,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  arrivingTime: { fontSize: fscale(20), fontWeight: '800', color: '#fff', letterSpacing: -0.4 },
-
+  arrivingTime: {
+    fontSize: fscale(20),
+    fontWeight: '800',
+    color: '#fff',
+    letterSpacing: -0.4,
+  },
   bottomRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md },
 });
 
