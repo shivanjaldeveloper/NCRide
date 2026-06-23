@@ -6,19 +6,15 @@ import {
   TextInput,
   TouchableOpacity,
   Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
-import { NCButton } from '../../components/common';
-import {
-  Colors,
-  Typography,
-  Spacing,
-  fscale,
-  vscale,
-  Radii,
-} from '../../theme';
+import { NCButton, Icon } from '../../components/common';
+import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OTPVerify'>;
 
@@ -27,23 +23,51 @@ const RESEND_SECONDS = 42;
 
 const OTPVerifyScreen = ({ navigation, route }: Props) => {
   const { phone } = route.params;
-  const [otp, setOtp] = useState('');
+  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(RESEND_SECONDS);
-  const inputRef = useRef<TextInput>(null);
+  const inputRefs = useRef<(TextInput | null)[]>([]);
 
-  // Countdown timer
   useEffect(() => {
     if (countdown <= 0) return;
     const t = setInterval(() => setCountdown(c => c - 1), 1000);
     return () => clearInterval(t);
   }, [countdown]);
 
+  const otpString = otp.join('');
+
+  const handleChange = (text: string, index: number) => {
+    const digit = text.replace(/[^0-9]/g, '').slice(-1); // take last digit only
+    const newOtp = [...otp];
+    newOtp[index] = digit;
+    setOtp(newOtp);
+    // move focus forward
+    if (digit && index < OTP_LENGTH - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyPress = (e: any, index: number) => {
+    if (e.nativeEvent.key === 'Backspace') {
+      if (otp[index]) {
+        // clear current
+        const newOtp = [...otp];
+        newOtp[index] = '';
+        setOtp(newOtp);
+      } else if (index > 0) {
+        // move back and clear previous
+        const newOtp = [...otp];
+        newOtp[index - 1] = '';
+        setOtp(newOtp);
+        inputRefs.current[index - 1]?.focus();
+      }
+    }
+  };
+
   const handleVerify = async () => {
-    if (otp.length < OTP_LENGTH) return;
+    if (otpString.length < OTP_LENGTH) return;
     Keyboard.dismiss();
     setLoading(true);
-    // TODO: call your OTP verify API here
     await new Promise(r => setTimeout(r, 900));
     setLoading(false);
     navigation.replace('LocationPermission');
@@ -51,12 +75,11 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
 
   const handleResend = () => {
     if (countdown > 0) return;
-    setOtp('');
+    setOtp(Array(OTP_LENGTH).fill(''));
     setCountdown(RESEND_SECONDS);
-    // TODO: call resend OTP API
+    inputRefs.current[0]?.focus();
   };
 
-  // Format countdown as MM:SS
   const mm = String(Math.floor(countdown / 60)).padStart(2, '0');
   const ss = String(countdown % 60).padStart(2, '0');
 
@@ -64,117 +87,119 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
     <ScreenShell
       topColor={Colors.bgWhite}
       bottomColor={Colors.bgWhite}
-      backgroundColor={Colors.bgWhite}>
-      <View style={styles.container}>
-
-        {/* Back */}
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}>
-          <Text style={styles.backIcon}>‹</Text>
-        </TouchableOpacity>
-
-        {/* Code sent badge */}
-        <View style={styles.sentBadge}>
-          <View style={styles.greenDot} />
-          <Text style={styles.sentText}>Code sent to +91 {phone}</Text>
-        </View>
-
-        <Text style={styles.heading}>Enter the code</Text>
-        <View style={styles.subRow}>
-          <Text style={styles.subText}>6-digit OTP · </Text>
-          <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Text style={styles.changeLink}>Change number</Text>
+      backgroundColor={Colors.bgWhite}
+    >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="always"
+        >
+          {/* Back */}
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.75}
+          >
+            <Icon name="chevronLeft" size={20} stroke={Colors.ink} sw={2} />
           </TouchableOpacity>
-        </View>
 
-        {/* Hidden real input */}
-        <TextInput
-          ref={inputRef}
-          style={styles.hiddenInput}
-          value={otp}
-          onChangeText={v => setOtp(v.replace(/[^0-9]/g, '').slice(0, OTP_LENGTH))}
-          keyboardType="number-pad"
-          maxLength={OTP_LENGTH}
-          autoFocus
-        />
+          {/* Code sent badge */}
+          <View style={styles.sentBadge}>
+            <View style={styles.greenDot} />
+            <Text style={styles.sentText}>Code sent to +91 {phone}</Text>
+          </View>
 
-        {/* Visual boxes */}
-        <TouchableOpacity
-          activeOpacity={1}
-          onPress={() => inputRef.current?.focus()}
-          style={styles.boxRow}>
-          {Array.from({ length: OTP_LENGTH }).map((_, i) => {
-            const char = otp[i];
-            const isFilled = !!char;
-            const isCurrent = i === otp.length;
-            return (
-              <View
+          <Text style={styles.heading}>Enter the code</Text>
+          <View style={styles.subRow}>
+            <Text style={styles.subText}>6-digit OTP · </Text>
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={styles.changeLink}>Change number</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* OTP Boxes — each is its own TextInput */}
+          <View style={styles.boxRow}>
+            {Array.from({ length: OTP_LENGTH }).map((_, i) => (
+              <TextInput
                 key={i}
-                style={[
-                  styles.box,
-                  isFilled && styles.boxFilled,
-                  isCurrent && styles.boxCurrent,
-                ]}>
-                {isFilled ? (
-                  <Text style={styles.digit}>{char}</Text>
-                ) : (
-                  <View style={styles.dash} />
-                )}
-              </View>
-            );
-          })}
-        </TouchableOpacity>
+                ref={el => (inputRefs.current[i] = el)}
+                style={[styles.box, otp[i] ? styles.boxFilled : null]}
+                value={otp[i]}
+                onChangeText={text => handleChange(text, i)}
+                onKeyPress={e => handleKeyPress(e, i)}
+                keyboardType="number-pad"
+                maxLength={1}
+                textAlign="center"
+                autoFocus={i === 0}
+                caretHidden
+                selectTextOnFocus
+                placeholder="—"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+              />
+            ))}
+          </View>
 
-        {/* Resend */}
-        <TouchableOpacity onPress={handleResend} disabled={countdown > 0}>
-          <Text style={styles.resend}>
-            {countdown > 0
-              ? `Resend code in ${mm}:${ss}`
-              : 'Resend code'}
+          {/* Resend */}
+          <TouchableOpacity onPress={handleResend} disabled={countdown > 0}>
+            <Text style={styles.resend}>
+              {countdown > 0 ? (
+                <>
+                  <Text>Resend code in </Text>
+                  <Text style={styles.resendStrong}>
+                    {mm}:{ss}
+                  </Text>
+                </>
+              ) : (
+                'Resend code'
+              )}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={{ flex: 1 }} />
+
+          <NCButton
+            label="Verify & continue"
+            iconRight="arrowRight"
+            onPress={handleVerify}
+            loading={loading}
+            disabled={otpString.length < OTP_LENGTH}
+            variant="primary"
+            size="lg"
+          />
+
+          <Text style={styles.legal}>
+            By continuing you agree to our{' '}
+            <Text style={styles.legalLink}>Terms</Text>
+            {' & '}
+            <Text style={styles.legalLink}>Privacy policy</Text>.
           </Text>
-        </TouchableOpacity>
-
-        <View style={{ flex: 1 }} />
-
-        <NCButton
-          label="Verify & continue →"
-          onPress={handleVerify}
-          loading={loading}
-          disabled={otp.length < OTP_LENGTH}
-        />
-
-        <Text style={styles.legal}>
-          By continuing you agree to our{' '}
-          <Text style={styles.legalLink}>Terms</Text>
-          {' & '}
-          <Text style={styles.legalLink}>Privacy policy</Text>.
-        </Text>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ScreenShell>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  scroll: {
+    flexGrow: 1,
     paddingHorizontal: Spacing.screen,
     paddingBottom: vscale(32),
   },
-
   backBtn: {
-    width: fscale(36),
-    height: fscale(36),
-    borderRadius: Radii.sm,
-    backgroundColor: Colors.pillBg,
+    width: fscale(40),
+    height: fscale(40),
+    borderRadius: Radii.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bgWhite,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: vscale(12),
+    marginTop: vscale(20),
     marginBottom: vscale(20),
   },
-  backIcon: { fontSize: fscale(22), color: Colors.textPrimary, marginTop: -2 },
-
   sentBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -187,61 +212,63 @@ const styles = StyleSheet.create({
     borderRadius: fscale(4),
     backgroundColor: Colors.green,
   },
-  sentText: { ...Typography.bodySmall, color: Colors.textSecondary },
-
-  heading: { ...Typography.h2, color: Colors.textPrimary, marginBottom: Spacing.xs },
-  subRow: { flexDirection: 'row', alignItems: 'center', marginBottom: vscale(28) },
-  subText: { ...Typography.bodySmall, color: Colors.textSecondary },
-  changeLink: { ...Typography.bodySmall, color: Colors.blue },
-
-  hiddenInput: {
-    position: 'absolute',
-    opacity: 0,
-    width: 1,
-    height: 1,
+  sentText: { fontSize: fscale(12), fontWeight: '700', color: Colors.green },
+  heading: {
+    fontSize: fscale(30),
+    fontWeight: '800',
+    letterSpacing: -1,
+    color: Colors.ink,
+    lineHeight: fscale(33),
+    marginBottom: Spacing.xs,
   },
+  subRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: vscale(32),
+  },
+  subText: { fontSize: fscale(14), color: Colors.textSecondary },
+  changeLink: { fontSize: fscale(14), fontWeight: '600', color: Colors.blue },
 
   boxRow: {
     flexDirection: 'row',
     gap: Spacing.sm,
-    marginBottom: vscale(12),
+    marginBottom: vscale(14),
   },
   box: {
-    width: fscale(46),
-    height: fscale(54),
-    borderRadius: Radii.md,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    flex: 1,
+    height: fscale(62),
+    borderRadius: Radii.lg,
+    backgroundColor: Colors.ink,
+    borderWidth: 2,
+    borderColor: Colors.ink,
+    fontSize: fscale(26),
+    fontWeight: '800',
+    color: Colors.lime,
   },
-  boxFilled: { backgroundColor: Colors.primary },
-  boxCurrent: { backgroundColor: '#2C2C2E' },
-  digit: {
-    ...Typography.h2,
-    color: Colors.accent,
-  },
-  dash: {
-    width: fscale(14),
-    height: 2,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 1,
+  boxFilled: {
+    backgroundColor: Colors.ink,
   },
 
   resend: {
-    ...Typography.bodySmall,
-    color: Colors.textTertiary,
+    fontSize: fscale(13.5),
+    color: Colors.textSecondary,
+    textAlign: 'center',
     marginBottom: vscale(16),
   },
-
+  resendStrong: {
+    color: Colors.ink,
+    fontWeight: '700',
+  },
   legal: {
-    ...Typography.caption,
+    fontSize: fscale(11.5),
     color: Colors.textTertiary,
     textAlign: 'center',
     marginTop: Spacing.md,
+    lineHeight: fscale(17.8),
   },
   legalLink: {
-    color: Colors.textPrimary,
-    textDecorationLine: 'underline',
+    color: Colors.ink,
+    fontWeight: '600',
   },
 });
 

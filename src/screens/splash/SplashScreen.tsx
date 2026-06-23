@@ -1,159 +1,87 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View,
   Text,
   StyleSheet,
   Animated,
   StatusBar,
   Easing,
+  Dimensions,
 } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+import Svg, {
+  Path,
+  Rect,
+  Circle,
+  Defs,
+  RadialGradient,
+  Stop,
+  Ellipse,
+} from 'react-native-svg';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from '../../navigation/types';
-import { Colors, Typography, fscale, vscale, Spacing } from '../../theme';
+import { Colors, fscale } from '../../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
+const SPLASH_DURATION_MS = 2200;
+const { width: SW, height: SH } = Dimensions.get('screen');
+
 const SplashScreen = ({ navigation }: Props) => {
-  const insets = useSafeAreaInsets();
-
-  const screenOpacity = useRef(new Animated.Value(0)).current;
-
-  const logoScale = useRef(new Animated.Value(0.7)).current;
+  const logoScale = useRef(new Animated.Value(0.85)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
-
   const textOpacity = useRef(new Animated.Value(0)).current;
   const loaderOpacity = useRef(new Animated.Value(0)).current;
-
-  const glowOpacity = useRef(new Animated.Value(0.05)).current;
-  const floatAnim = useRef(new Animated.Value(0)).current;
-
-  const dot1 = useRef(new Animated.Value(0.3)).current;
-  const dot2 = useRef(new Animated.Value(0.3)).current;
-  const dot3 = useRef(new Animated.Value(0.3)).current;
+  const spin = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(screenOpacity, {
-      toValue: 1,
-      duration: 600,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: true,
-    }).start();
-
     Animated.parallel([
       Animated.spring(logoScale, {
         toValue: 1,
-        tension: 40,
-        friction: 7,
+        tension: 50,
+        friction: 8,
         useNativeDriver: true,
       }),
-
       Animated.timing(logoOpacity, {
         toValue: 1,
         duration: 700,
         easing: Easing.out(Easing.exp),
         useNativeDriver: true,
       }),
-
       Animated.timing(textOpacity, {
         toValue: 1,
-        duration: 800,
-        delay: 250,
-        easing: Easing.out(Easing.cubic),
+        duration: 500,
+        delay: 150,
         useNativeDriver: true,
       }),
-
       Animated.timing(loaderOpacity, {
         toValue: 1,
-        duration: 800,
-        delay: 700,
+        duration: 400,
+        delay: 350,
         useNativeDriver: true,
       }),
     ]).start();
 
     Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatAnim, {
-          toValue: -8,
-          duration: 2200,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(floatAnim, {
-          toValue: 0,
-          duration: 2200,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
+      Animated.timing(spin, {
+        toValue: 1,
+        duration: 900,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
     ).start();
-
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowOpacity, {
-          toValue: 0.16,
-          duration: 1800,
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowOpacity, {
-          toValue: 0.05,
-          duration: 1800,
-          useNativeDriver: true,
-        }),
-      ]),
-    ).start();
-
-    const animateDot = (value: Animated.Value, delay: number) => {
-      Animated.loop(
-        Animated.sequence([
-          Animated.delay(delay),
-          Animated.timing(value, {
-            toValue: 1,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-          Animated.timing(value, {
-            toValue: 0.3,
-            duration: 500,
-            useNativeDriver: true,
-          }),
-        ]),
-      ).start();
-    };
-
-    animateDot(dot1, 0);
-    animateDot(dot2, 200);
-    animateDot(dot3, 400);
 
     const timer = setTimeout(() => {
-      Animated.timing(screenOpacity, {
-        toValue: 0,
-        duration: 350,
-        useNativeDriver: true,
-      }).start(() => {
-        navigation.replace('Onboarding');
-      });
-    }, 2500);
+      navigation.replace('Onboarding');
+    }, SPLASH_DURATION_MS);
 
     return () => clearTimeout(timer);
-  }, [
-    navigation,
-    screenOpacity,
-    logoScale,
-    logoOpacity,
-    textOpacity,
-    loaderOpacity,
-    glowOpacity,
-    floatAnim,
-    dot1,
-    dot2,
-    dot3,
-  ]);
+  }, [navigation, logoScale, logoOpacity, textOpacity, loaderOpacity, spin]);
+
+  const spinDeg = spin.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   return (
     <SafeAreaView style={styles.root}>
@@ -163,82 +91,118 @@ const SplashScreen = ({ navigation }: Props) => {
         barStyle="light-content"
       />
 
+      {/* Full-screen SVG background with true RadialGradient — perfectly smooth, zero rings */}
+      <Svg
+        width={SW}
+        height={SH}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      >
+        <Defs>
+          {/* Lime/green glow for top-left */}
+          <RadialGradient id="glowLime" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor="#8EC000" stopOpacity="0.22" />
+            <Stop offset="40%" stopColor="#4A7000" stopOpacity="0.06" />
+            <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+          </RadialGradient>
+
+          {/* Blue glow for bottom-right */}
+          <RadialGradient id="glowBlue" cx="50%" cy="50%" r="50%">
+            <Stop offset="0%" stopColor="#1A4FCC" stopOpacity="0.24" />
+            <Stop offset="40%" stopColor="#091A50" stopOpacity="0.07" />
+            <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+          </RadialGradient>
+        </Defs>
+
+        {/* Lime glow — upper-left diagonal, large */}
+        <Ellipse
+          cx={SW * 0.25}
+          cy={SH * 0.28}
+          rx={SW * 1.2}
+          ry={SH * 0.52}
+          fill="url(#glowLime)"
+        />
+
+        {/* Blue glow — lower-right diagonal, large */}
+        <Ellipse
+          cx={SW * 0.75}
+          cy={SH * 0.72}
+          rx={SW * 1.2}
+          ry={SH * 0.52}
+          fill="url(#glowBlue)"
+        />
+      </Svg>
+
       <Animated.View
         style={[
-          styles.root,
-          {
-            opacity: screenOpacity,
-          },
+          styles.logoBox,
+          { opacity: logoOpacity, transform: [{ scale: logoScale }] },
         ]}
       >
-        <LinearGradient
-          colors={[Colors.splashTop, Colors.splashMid, Colors.splashBot]}
-          locations={[0, 0.45, 1]}
-          style={styles.gradient}
+        <Svg
+          width={fscale(64)}
+          height={fscale(64)}
+          viewBox="0 0 64 64"
+          fill="none"
         >
-          <Animated.View
-            style={[
-              styles.glowRing,
-              {
-                opacity: glowOpacity,
-                transform: [
-                  {
-                    scale: glowOpacity.interpolate({
-                      inputRange: [0.05, 0.16],
-                      outputRange: [1, 1.2],
-                    }),
-                  },
-                ],
-              },
-            ]}
+          <Path d="M10 42 L14 26 H50 L54 42 V46 H10Z" fill={Colors.ink} />
+          <Rect
+            x={16}
+            y={28}
+            width={32}
+            height={12}
+            rx={3}
+            fill="#9AC8FF"
+            opacity={0.85}
           />
+          <Circle
+            cx={20}
+            cy={46}
+            r={5}
+            fill={Colors.ink}
+            stroke={Colors.lime}
+            strokeWidth={2}
+          />
+          <Circle
+            cx={44}
+            cy={46}
+            r={5}
+            fill={Colors.ink}
+            stroke={Colors.lime}
+            strokeWidth={2}
+          />
+          <Path d="M28 28 L34 20 L40 28Z" fill={Colors.lime} opacity={0.7} />
+        </Svg>
+      </Animated.View>
 
-          <Animated.View
-            style={[
-              styles.logoWrap,
-              {
-                opacity: logoOpacity,
-                transform: [{ scale: logoScale }, { translateY: floatAnim }],
-              },
-            ]}
-          >
-            <View style={styles.logoBox}>
-              {/* Replace with SVG Logo */}
-              <Text style={styles.logoEmoji}>🚌</Text>
-            </View>
-          </Animated.View>
+      <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
+        <Text style={styles.brandName}>NCRide</Text>
+        <Text style={styles.brandSub}>NOIDA · DELHI NCR RIDES</Text>
+      </Animated.View>
 
-          <Animated.View
-            style={[
-              styles.textContainer,
-              {
-                opacity: textOpacity,
-              },
-            ]}
-          >
-            <Text style={styles.brandName}>NCRide</Text>
-
-            <Text style={styles.brandSub}>NOIDA · DELHI NCR RIDES</Text>
-          </Animated.View>
-
-          <Animated.View
-            style={[
-              styles.bottomWrap,
-              {
-                opacity: loaderOpacity,
-                bottom: insets.bottom + vscale(28),
-              },
-            ]}
-          >
-            <View style={styles.loaderRow}>
-              <Animated.View style={[styles.loaderDot, { opacity: dot1 }]} />
-              <Animated.View style={[styles.loaderDot, { opacity: dot2 }]} />
-              <Animated.View style={[styles.loaderDot, { opacity: dot3 }]} />
-            </View>
-
-            <Text style={styles.region}>INDIA · NCR</Text>
-          </Animated.View>
-        </LinearGradient>
+      <Animated.View style={[styles.bottomWrap, { opacity: loaderOpacity }]}>
+        <Animated.View
+          style={[styles.spinnerWrap, { transform: [{ rotate: spinDeg }] }]}
+        >
+          <Svg width={28} height={28} viewBox="0 0 50 50">
+            <Circle
+              cx={25}
+              cy={25}
+              r={20}
+              stroke="rgba(255,255,255,0.15)"
+              strokeWidth={3}
+              fill="none"
+            />
+            <Path
+              d="M25 5 A20 20 0 0 1 45 25"
+              stroke={Colors.lime}
+              strokeWidth={3}
+              fill="none"
+              strokeLinecap="round"
+            />
+          </Svg>
+        </Animated.View>
+        <Text style={styles.region}>INDIA · NCR</Text>
       </Animated.View>
     </SafeAreaView>
   );
@@ -247,91 +211,51 @@ const SplashScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.splashBot,
-  },
-
-  gradient: {
-    flex: 1,
-    justifyContent: 'center',
+    backgroundColor: Colors.ink,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-
-  glowRing: {
-    position: 'absolute',
-    width: fscale(240),
-    height: fscale(240),
-    borderRadius: fscale(120),
-    backgroundColor: Colors.accent,
-  },
-
-  logoWrap: {
-    marginBottom: vscale(22),
-  },
-
   logoBox: {
-    width: fscale(96),
-    height: fscale(96),
-    borderRadius: fscale(28),
-
-    backgroundColor: Colors.accent,
-
+    width: fscale(110),
+    height: fscale(110),
+    borderRadius: fscale(32),
+    backgroundColor: '#E8FBC9',
+    alignItems: 'center',
     justifyContent: 'center',
-    alignItems: 'center',
-
-    shadowColor: Colors.accent,
-    shadowOpacity: 0.45,
-    shadowRadius: 24,
-    shadowOffset: {
-      width: 0,
-      height: 12,
-    },
-
-    elevation: 16,
+    marginBottom: fscale(28),
+    shadowColor: Colors.lime,
+    shadowOpacity: 0.4,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 14 },
+    elevation: 14,
   },
-
-  logoEmoji: {
-    fontSize: fscale(42),
-  },
-
-  textContainer: {
-    alignItems: 'center',
-  },
-
   brandName: {
-    ...Typography.h1,
-    color: Colors.textInverse,
-    marginBottom: Spacing.xs,
+    fontSize: fscale(34),
+    fontWeight: '700',
+    letterSpacing: -1.2,
+    color: '#FFFFFF',
   },
-
   brandSub: {
-    ...Typography.label,
+    marginTop: fscale(6),
+    fontSize: fscale(13),
+    fontWeight: '500',
+    letterSpacing: 1.2,
     color: 'rgba(255,255,255,0.55)',
-    letterSpacing: 1.6,
   },
-
   bottomWrap: {
     position: 'absolute',
+    bottom: fscale(60),
     alignItems: 'center',
+    gap: fscale(12),
   },
-
-  loaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: vscale(12),
+  spinnerWrap: {
+    width: 28,
+    height: 28,
   },
-
-  loaderDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: Colors.accent,
-    marginHorizontal: 4,
-  },
-
   region: {
-    ...Typography.label,
-    color: 'rgba(255,255,255,0.45)',
-    letterSpacing: 1.5,
+    fontSize: fscale(11),
+    letterSpacing: 1.2,
+    color: 'rgba(255,255,255,0.4)',
   },
 });
 

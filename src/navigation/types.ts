@@ -5,6 +5,12 @@ export type RootStackParamList = {
   OTPVerify: { phone: string };
   LocationPermission: undefined;
   HomeTabs: undefined;
+  Ride: { mode?: 'ride' | 'cab' | 'bike' | 'reserve' | 'intercity' } | undefined;
+  Driver: undefined;
+  Tracking: undefined;
+  Completed: undefined;
+  Chat: undefined;
+  SOS: undefined;
 };
 
 export type HomeTabParamList = {

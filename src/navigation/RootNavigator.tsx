@@ -9,6 +9,12 @@ import OTPLoginScreen from '../../src/screens/auth/OTPLoginScreen';
 import OTPVerifyScreen from '../../src/screens/auth/OTPVerifyScreen';
 import LocationPermissionScreen from '../screens/Permissions/LocationPermissionScreen';
 import HomeTabs from './HomeTabs';
+import RideScreen from '../screens/ride/RideScreen';
+import DriverScreen from '../screens/ride/DriverScreen';
+import TrackingScreen from '../screens/ride/TrackingScreen';
+import CompletedScreen from '../screens/ride/CompletedScreen';
+import ChatScreen from '../screens/chat/ChatScreen';
+import SOSScreen from '../screens/safety/SOSScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -43,6 +49,36 @@ const RootNavigator = () => (
         name="HomeTabs"
         component={HomeTabs}
         options={{ animation: 'fade' }}
+      />
+      <Stack.Screen
+        name="Ride"
+        component={RideScreen}
+        options={{ animation: 'slide_from_bottom', gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="Driver"
+        component={DriverScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="Tracking"
+        component={TrackingScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="Completed"
+        component={CompletedScreen}
+        options={{ animation: 'slide_from_bottom', gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="Chat"
+        component={ChatScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="SOS"
+        component={SOSScreen}
+        options={{ animation: 'slide_from_bottom', gestureEnabled: true }}
       />
     </Stack.Navigator>
   </NavigationContainer>

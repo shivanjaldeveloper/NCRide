@@ -6,7 +6,14 @@ import {
   ScrollView,
   TouchableOpacity,
 } from 'react-native';
+import type { CompositeScreenProps } from '@react-navigation/native';
+import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenShell } from '../../components/layout';
+import { Icon } from '../../components/common';
+import { MapView } from '../../components/map';
+import type { IconName } from '../../components/common';
+import type { HomeTabParamList, RootStackParamList } from '../../navigation/types';
 import {
   Colors,
   Typography,
@@ -17,14 +24,79 @@ import {
   Shadows,
 } from '../../theme';
 
+type Props = CompositeScreenProps<
+  BottomTabScreenProps<HomeTabParamList, 'Home'>,
+  NativeStackScreenProps<RootStackParamList>
+>;
+
 // ─── Service grid data ─────────────────────────────────────────────────────
-const SERVICES = [
-  { id: 'car', icon: '🚗', label: 'Car', sub: 'Mini to XL' },
-  { id: 'bike', icon: '🏍️', label: 'Bike', sub: 'Fastest' },
-  { id: 'auto', icon: '🛺', label: 'Auto', sub: 'Nimble' },
-  { id: 'erick', icon: '⚡', label: 'E-Rickshaw', sub: 'Eco ride' },
-  { id: 'reserve', icon: '🕐', label: 'Reserve', sub: 'Schedule' },
-  { id: 'intercity', icon: '🏔️', label: 'Intercity', sub: 'Outstation' },
+const SERVICES: { id: string; icon: IconName; label: string; sub: string; bg: string }[] = [
+  { id: 'car', icon: 'car', label: 'Car', sub: 'Mini to XL', bg: '#EAF1FF' },
+  { id: 'bike', icon: 'bike', label: 'Bike', sub: 'Fastest', bg: '#E6F9EC' },
+  { id: 'auto', icon: 'taxi', label: 'Auto', sub: 'Nimble', bg: '#FEF6E4' },
+  {
+    id: 'erick',
+    icon: 'car',
+    label: 'E-Rickshaw',
+    sub: 'Eco ride',
+    bg: '#EAF1FF',
+  },
+  {
+    id: 'reserve',
+    icon: 'reserve',
+    label: 'Reserve',
+    sub: 'Schedule',
+    bg: '#F3EEFF',
+  },
+  {
+    id: 'intercity',
+    icon: 'intercity',
+    label: 'Intercity',
+    sub: 'Outstation',
+    bg: '#FFE9E9',
+  },
+];
+
+// ─── Recent rides data ─────────────────────────────────────────────────────
+const RECENT_RIDES: {
+  id: string;
+  icon: IconName;
+  from: string;
+  to: string;
+  fare: string;
+  type: string;
+}[] = [
+  {
+    id: '1',
+    icon: 'car',
+    from: 'Sector 62',
+    to: 'Connaught Place',
+    fare: '₹284',
+    type: 'NCRide Mini · Yesterday',
+  },
+  {
+    id: '2',
+    icon: 'bike',
+    from: 'Sector 18',
+    to: 'Botanical Garden Metro',
+    fare: '₹72',
+    type: 'Bike Taxi · 2 days ago',
+  },
+  {
+    id: '3',
+    icon: 'car',
+    from: 'Noida Sector 16',
+    to: 'India Gate',
+    fare: '₹448',
+    type: 'NCRide Sedan · 5 days ago',
+  },
+];
+
+// ─── Quick actions ─────────────────────────────────────────────────────────
+const QUICK_ACTIONS: { id: string; icon: IconName; label: string }[] = [
+  { id: 'coupons', icon: 'coupon', label: 'Coupons' },
+  { id: 'rewards', icon: 'reward', label: 'Rewards' },
+  { id: 'refer', icon: 'refer', label: 'Refer & earn' },
 ];
 
 // ─── Sub-components ────────────────────────────────────────────────────────
@@ -32,11 +104,13 @@ const ServiceCard = ({
   icon,
   label,
   sub,
+  bg,
   onPress,
 }: {
-  icon: string;
+  icon: IconName;
   label: string;
   sub: string;
+  bg: string;
   onPress: () => void;
 }) => (
   <TouchableOpacity
@@ -44,16 +118,49 @@ const ServiceCard = ({
     onPress={onPress}
     activeOpacity={0.75}
   >
-    <View style={styles.serviceIconWrap}>
-      <Text style={styles.serviceIcon}>{icon}</Text>
+    <View style={[styles.serviceIconWrap, { backgroundColor: bg }]}>
+      <Icon name={icon} size={20} stroke={Colors.ink} sw={1.7} />
     </View>
     <Text style={styles.serviceLabel}>{label}</Text>
     <Text style={styles.serviceSub}>{sub}</Text>
   </TouchableOpacity>
 );
 
+const RideRow = ({
+  icon,
+  from,
+  to,
+  fare,
+  type,
+}: {
+  icon: IconName;
+  from: string;
+  to: string;
+  fare: string;
+  type: string;
+}) => (
+  <View style={styles.rideRow}>
+    <View style={styles.rideIconWrap}>
+      <Icon name={icon} size={17} stroke={Colors.ink} sw={1.7} />
+    </View>
+    <View style={styles.rideInfo}>
+      <Text style={styles.rideRoute}>
+        {from} — {to}
+      </Text>
+      <Text style={styles.rideType}>{type}</Text>
+    </View>
+    <View style={styles.rideFareWrap}>
+      <Text style={styles.rideFare}>{fare}</Text>
+      <Text style={styles.ridePaid}>Paid</Text>
+    </View>
+  </View>
+);
+
 // ─── Home Screen ───────────────────────────────────────────────────────────
-const HomeScreen = () => {
+const HomeScreen = ({ navigation }: Props) => {
+  const goRide = (mode?: 'ride' | 'cab' | 'bike' | 'reserve' | 'intercity') =>
+    navigation.getParent()?.navigate('Ride' as never, { mode } as never);
+
   return (
     <ScreenShell
       topColor={Colors.bgOffWhite}
@@ -65,10 +172,9 @@ const HomeScreen = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* ── Header ── */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            {/* Avatar */}
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>AR</Text>
             </View>
@@ -79,26 +185,31 @@ const HomeScreen = () => {
           </View>
           <View style={styles.headerIcons}>
             <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
-              <Text style={styles.iconEmoji}>⏱️</Text>
+              <Icon name="clock" size={16} stroke={Colors.ink} sw={1.7} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
-              <Text style={styles.iconEmoji}>🔔</Text>
+              <Icon name="bell" size={16} stroke={Colors.ink} sw={1.7} />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Location pill */}
+        {/* ── Location pill ── */}
         <TouchableOpacity style={styles.locationPill} activeOpacity={0.8}>
-          <Text style={styles.locationEmoji}>📍</Text>
+          <Icon name="locate" size={12} stroke={Colors.blue} sw={2} />
           <Text style={styles.locationText}>Sector 62, Noida</Text>
-          <Text style={styles.locationChev}>▾</Text>
+          <Icon name="chevronDown" size={12} stroke={Colors.textSecondary} sw={2} />
         </TouchableOpacity>
 
-        {/* Search card */}
+        {/* ── Search / Map card ── */}
         <View style={[styles.searchCard, Shadows.card]}>
-          <TouchableOpacity style={styles.searchRow} activeOpacity={0.8}>
+          {/* Search row */}
+          <TouchableOpacity
+            style={styles.searchRow}
+            activeOpacity={0.8}
+            onPress={() => goRide('ride')}
+          >
             <View style={styles.searchIconWrap}>
-              <Text style={styles.searchEmoji}>🔍</Text>
+              <Icon name="search" size={17} stroke="#fff" sw={1.8} />
             </View>
             <View style={styles.searchTextWrap}>
               <Text style={styles.searchLabel}>Where to?</Text>
@@ -107,64 +218,56 @@ const HomeScreen = () => {
               </Text>
             </View>
             <TouchableOpacity style={styles.laterBtn} activeOpacity={0.7}>
-              <Text style={styles.laterText}>⏱ Later</Text>
+              <Icon name="clock" size={12} stroke={Colors.textSecondary} sw={2} />
+              <Text style={styles.laterText}>Later</Text>
             </TouchableOpacity>
           </TouchableOpacity>
 
           {/* Map preview */}
           <View style={styles.mapPreview}>
-            {/* Simplified map */}
-            <View style={styles.mapRoadH} />
-            <View style={styles.mapRoadV} />
-            <View style={styles.mapRoute} />
-            <View style={styles.mapDotFrom}>
-              <View style={styles.mapDotInner} />
-            </View>
-            <View style={styles.mapDotTo}>
-              <View
-                style={[
-                  styles.mapDotInner,
-                  { backgroundColor: Colors.primary },
-                ]}
-              />
-            </View>
-
-            {/* Waypoint pills */}
-            <View style={[styles.waypointPill, { top: '38%', left: '5%' }]}>
-              <View style={[styles.wpDot, { backgroundColor: Colors.green }]} />
-              <Text style={styles.wpText}>Sector 62, Noida</Text>
-            </View>
-            <View style={[styles.waypointPill, { top: '58%', left: '30%' }]}>
-              <View
-                style={[styles.wpDot, { backgroundColor: Colors.primary }]}
-              />
-              <Text style={styles.wpText}>Connaught Place</Text>
-            </View>
-
-            {/* Book CTA overlay */}
-            <View style={styles.bookOverlay}>
-              <View>
-                <Text style={styles.routeLabel}>Suggested route</Text>
-                <Text style={styles.routeMeta}>38 min · ₹228</Text>
-              </View>
-              <TouchableOpacity style={styles.bookBtn} activeOpacity={0.85}>
-                <Text style={styles.bookBtnText}>Book →</Text>
-              </TouchableOpacity>
-            </View>
+            <MapView
+              height={vscale(178)}
+              showRoute
+              showControls={false}
+              pickup="Sector 62, Noida"
+              drop="Connaught Place"
+            />
 
             {/* Zoom controls */}
             <View style={styles.zoomControls}>
               <TouchableOpacity style={styles.zoomBtn} activeOpacity={0.7}>
                 <Text style={styles.zoomText}>+</Text>
               </TouchableOpacity>
+              <View style={styles.zoomDivider} />
               <TouchableOpacity style={styles.zoomBtn} activeOpacity={0.7}>
                 <Text style={styles.zoomText}>−</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Book overlay */}
+            <View style={styles.bookOverlay}>
+              <View style={styles.bookOverlayLeft}>
+                {/* Route icon */}
+                <View style={styles.routeIconWrap}>
+                  <Icon name="route" size={15} stroke={Colors.green} sw={2} />
+                </View>
+                <View>
+                  <Text style={styles.routeLabel}>Suggested route</Text>
+                  <Text style={styles.routeMeta}>38 min · ₹228</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.bookBtn}
+                activeOpacity={0.85}
+                onPress={() => goRide('ride')}
+              >
+                <Text style={styles.bookBtnText}>Book →</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
 
-        {/* Services */}
+        {/* ── Services ── */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>SERVICES</Text>
           <TouchableOpacity activeOpacity={0.7}>
@@ -179,18 +282,96 @@ const HomeScreen = () => {
               icon={s.icon}
               label={s.label}
               sub={s.sub}
-              onPress={() => {}}
+              bg={s.bg}
+              onPress={() =>
+                goRide(
+                  s.id === 'bike'
+                    ? 'bike'
+                    : s.id === 'reserve'
+                    ? 'reserve'
+                    : s.id === 'intercity'
+                    ? 'intercity'
+                    : s.id === 'car' || s.id === 'erick'
+                    ? 'cab'
+                    : 'ride',
+                )
+              }
             />
           ))}
         </View>
 
-        {/* Promo banner */}
+        {/* ── Promo banner ── */}
         <View style={styles.promoBanner}>
-          <View>
+          <View style={styles.promoLeft}>
             <Text style={styles.promoEyebrow}>LIMITED OFFER</Text>
-            <Text style={styles.promoTitle}>50% off your first ride</Text>
+            <Text style={styles.promoTitle}>
+              50% off your{'\n'}first NCRide
+            </Text>
+            <TouchableOpacity style={styles.promoCodeBtn} activeOpacity={0.85}>
+              <Text style={styles.promoCodeText}>Use FIRSTRIDE →</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.promoEmoji}>🎉</Text>
+          <View style={styles.promoGift}>
+            <Icon name="gift" size={48} stroke={Colors.ink} sw={1.4} />
+          </View>
+        </View>
+
+        {/* ── Recent Rides ── */}
+        <View style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>
+          <Text style={styles.sectionTitle}>RECENT RIDES</Text>
+        </View>
+
+        <View style={[styles.card, Shadows.card]}>
+          {RECENT_RIDES.map((ride, index) => (
+            <View key={ride.id}>
+              <RideRow
+                icon={ride.icon}
+                from={ride.from}
+                to={ride.to}
+                fare={ride.fare}
+                type={ride.type}
+              />
+              {index < RECENT_RIDES.length - 1 && (
+                <View style={styles.divider} />
+              )}
+            </View>
+          ))}
+        </View>
+
+        {/* ── NCRide Wallet ── */}
+        <View style={[styles.walletCard, Shadows.card]}>
+          <View style={styles.walletLeft}>
+            <View style={styles.walletIconWrap}>
+              <Icon name="wallet" size={18} stroke={Colors.lime} sw={1.7} />
+            </View>
+            <View>
+              <Text style={styles.walletLabel}>NCRIDE WALLET</Text>
+              <Text style={styles.walletAmount}>₹ 2,184.50</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.addMoneyBtn} activeOpacity={0.8}>
+            <Text style={styles.addMoneyText}>+ Add money</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Quick Actions ── */}
+        <View style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>
+          <Text style={styles.sectionTitle}>QUICK ACTIONS</Text>
+        </View>
+
+        <View style={styles.quickActionsRow}>
+          {QUICK_ACTIONS.map(qa => (
+            <TouchableOpacity
+              key={qa.id}
+              style={styles.quickActionCard}
+              activeOpacity={0.75}
+            >
+              <View style={styles.qaIconWrap}>
+                <Icon name={qa.icon} size={18} stroke={Colors.ink} sw={1.7} />
+              </View>
+              <Text style={styles.qaLabel}>{qa.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </ScrollView>
     </ScreenShell>
@@ -202,10 +383,10 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: {
     paddingHorizontal: Spacing.screen,
-    paddingBottom: vscale(24),
+    paddingBottom: vscale(32),
   },
 
-  // Header
+  // ── Header ──
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -215,9 +396,9 @@ const styles = StyleSheet.create({
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   avatar: {
-    width: fscale(40),
-    height: fscale(40),
-    borderRadius: fscale(20),
+    width: fscale(42),
+    height: fscale(42),
+    borderRadius: fscale(21),
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -225,42 +406,51 @@ const styles = StyleSheet.create({
   avatarText: {
     ...Typography.label,
     color: Colors.textInverse,
+    fontSize: fscale(13),
     letterSpacing: 0.5,
   },
-  greeting: { ...Typography.label, color: Colors.textTertiary },
+  greeting: {
+    ...Typography.label,
+    color: Colors.textTertiary,
+    fontSize: fscale(10),
+    marginBottom: 1,
+  },
   headerTitle: { ...Typography.h4, color: Colors.textPrimary },
   headerIcons: { flexDirection: 'row', gap: Spacing.sm },
   iconBtn: {
     width: fscale(36),
     height: fscale(36),
     borderRadius: Radii.sm,
-    backgroundColor: Colors.pillBg,
+    backgroundColor: Colors.bgWhite,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  iconEmoji: { fontSize: fscale(16) },
 
-  // Location
+  // ── Location pill ──
   locationPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
-    backgroundColor: Colors.pillBg,
+    backgroundColor: Colors.bgWhite,
     alignSelf: 'flex-start',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
+    paddingHorizontal: fscale(12),
+    paddingVertical: fscale(6),
     borderRadius: Radii.pill,
     marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    ...Shadows.card,
   },
-  locationEmoji: { fontSize: fscale(13) },
   locationText: {
     ...Typography.bodySmall,
     color: Colors.textPrimary,
     fontWeight: '600',
+    fontSize: fscale(13),
   },
-  locationChev: { fontSize: fscale(11), color: Colors.textSecondary },
 
-  // Search card
+  // ── Search card ──
   searchCard: {
     backgroundColor: Colors.bgWhite,
     borderRadius: Radii.xl,
@@ -274,108 +464,71 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   searchIconWrap: {
-    width: fscale(36),
-    height: fscale(36),
-    borderRadius: Radii.sm,
+    width: fscale(38),
+    height: fscale(38),
+    borderRadius: Radii.md,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  searchEmoji: { fontSize: fscale(16), color: Colors.textInverse },
   searchTextWrap: { flex: 1 },
-  searchLabel: { ...Typography.h4, color: Colors.textPrimary },
-  searchHint: { ...Typography.caption, color: Colors.textSecondary },
+  searchLabel: {
+    ...Typography.h4,
+    color: Colors.textPrimary,
+    fontSize: fscale(16),
+  },
+  searchHint: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    marginTop: 1,
+  },
   laterBtn: {
-    backgroundColor: Colors.pillBg,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radii.pill,
-  },
-  laterText: { ...Typography.caption, color: Colors.textSecondary },
-
-  // Map preview
-  mapPreview: {
-    height: vscale(160),
-    backgroundColor: Colors.mapBlue,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  mapRoadH: {
-    position: 'absolute',
-    top: '50%',
-    left: 0,
-    right: 0,
-    height: fscale(10),
-    backgroundColor: Colors.mapRoad,
-    opacity: 0.6,
-  },
-  mapRoadV: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: '30%',
-    width: fscale(10),
-    backgroundColor: Colors.mapRoad,
-    opacity: 0.6,
-  },
-  mapRoute: {
-    position: 'absolute',
-    top: '25%',
-    left: '15%',
-    right: '10%',
-    height: 3,
-    backgroundColor: Colors.blue,
-    borderRadius: 2,
-  },
-  mapDotFrom: {
-    position: 'absolute',
-    top: '20%',
-    left: '13%',
-    width: fscale(14),
-    height: fscale(14),
-    borderRadius: fscale(7),
-    backgroundColor: Colors.bgWhite,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mapDotTo: {
-    position: 'absolute',
-    top: '20%',
-    right: '8%',
-    width: fscale(14),
-    height: fscale(14),
-    borderRadius: fscale(7),
-    backgroundColor: Colors.bgWhite,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mapDotInner: {
-    width: fscale(8),
-    height: fscale(8),
-    borderRadius: fscale(4),
-    backgroundColor: Colors.green,
-  },
-
-  waypointPill: {
-    position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.bgWhite,
+    backgroundColor: Colors.pillBg,
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 3,
+    paddingVertical: fscale(5),
     borderRadius: Radii.pill,
-    ...Shadows.card,
   },
-  wpDot: {
-    width: fscale(6),
-    height: fscale(6),
-    borderRadius: 3,
-  },
-  wpText: {
+  laterText: {
     ...Typography.caption,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+
+  // ── Map preview ──
+  mapPreview: {
+    height: vscale(178),
+    position: 'relative',
+    overflow: 'hidden',
+  },
+
+  zoomControls: {
+    position: 'absolute',
+    right: Spacing.sm,
+    top: Spacing.sm,
+    backgroundColor: Colors.bgWhite,
+    borderRadius: Radii.sm,
+    ...Shadows.card,
+    overflow: 'hidden',
+  },
+  zoomBtn: {
+    width: fscale(30),
+    height: fscale(30),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  zoomDivider: {
+    height: 1,
+    backgroundColor: Colors.border,
+    marginHorizontal: fscale(4),
+  },
+  zoomText: {
+    fontSize: fscale(18),
     color: Colors.textPrimary,
-    fontSize: fscale(10),
+    fontWeight: '400',
+    lineHeight: fscale(22),
   },
 
   bookOverlay: {
@@ -389,15 +542,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    ...Shadows.card,
+    paddingVertical: fscale(10),
+    ...Shadows.strong,
   },
-  routeLabel: { ...Typography.caption, color: Colors.textSecondary },
-  routeMeta: { ...Typography.h4, color: Colors.textPrimary },
+  bookOverlayLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  routeIconWrap: {
+    width: fscale(30),
+    height: fscale(30),
+    borderRadius: Radii.sm,
+    backgroundColor: Colors.accentSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  routeLabel: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    fontSize: fscale(11),
+  },
+  routeMeta: {
+    ...Typography.bodySmall,
+    color: Colors.textPrimary,
+    fontWeight: '700',
+    fontSize: fscale(13),
+  },
   bookBtn: {
     backgroundColor: Colors.primary,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: fscale(20),
+    paddingVertical: fscale(10),
     borderRadius: Radii.pill,
   },
   bookBtnText: {
@@ -406,37 +581,27 @@ const styles = StyleSheet.create({
     fontSize: fscale(14),
   },
 
-  zoomControls: {
-    position: 'absolute',
-    right: Spacing.sm,
-    top: Spacing.sm,
-    gap: 2,
-  },
-  zoomBtn: {
-    width: fscale(28),
-    height: fscale(28),
-    backgroundColor: Colors.bgWhite,
-    borderRadius: Radii.xs,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Shadows.card,
-  },
-  zoomText: {
-    ...Typography.h4,
-    color: Colors.textPrimary,
-    fontSize: fscale(16),
-  },
-
-  // Services
+  // ── Section header ──
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.md,
   },
-  sectionTitle: { ...Typography.label, color: Colors.textTertiary },
-  seeAll: { ...Typography.bodySmall, color: Colors.blue, fontWeight: '600' },
+  sectionTitle: {
+    ...Typography.label,
+    color: Colors.textTertiary,
+    fontSize: fscale(11),
+    letterSpacing: 1,
+  },
+  seeAll: {
+    ...Typography.bodySmall,
+    color: Colors.blue,
+    fontWeight: '600',
+    fontSize: fscale(13),
+  },
 
+  // ── Services grid ──
   servicesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -451,38 +616,204 @@ const styles = StyleSheet.create({
     ...Shadows.card,
   },
   serviceIconWrap: {
-    width: fscale(36),
-    height: fscale(36),
-    borderRadius: Radii.sm,
-    backgroundColor: Colors.pillBg,
+    width: fscale(40),
+    height: fscale(40),
+    borderRadius: Radii.md,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
   },
-  serviceIcon: { fontSize: fscale(20) },
   serviceLabel: {
     ...Typography.bodySmall,
     fontWeight: '700',
     color: Colors.textPrimary,
+    fontSize: fscale(13),
   },
-  serviceSub: { ...Typography.caption, color: Colors.textSecondary },
+  serviceSub: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    fontSize: fscale(11),
+    marginTop: 1,
+  },
 
-  // Promo
+  // ── Promo banner ──
   promoBanner: {
-    backgroundColor: Colors.accentSoft,
+    backgroundColor: '#D4EDAA',
     borderRadius: Radii.xl,
     padding: Spacing.xl,
+    paddingVertical: fscale(22),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    overflow: 'hidden',
+  },
+  promoLeft: { flex: 1 },
+  promoEyebrow: {
+    ...Typography.label,
+    color: '#5A7A1A',
+    fontSize: fscale(10),
+    letterSpacing: 1,
+    marginBottom: fscale(4),
+  },
+  promoTitle: {
+    fontSize: fscale(20),
+    fontWeight: '800',
+    color: Colors.ink,
+    letterSpacing: -0.5,
+    lineHeight: fscale(26),
+    marginBottom: fscale(14),
+  },
+  promoCodeBtn: {
+    backgroundColor: Colors.ink,
+    alignSelf: 'flex-start',
+    paddingHorizontal: fscale(16),
+    paddingVertical: fscale(9),
+    borderRadius: Radii.pill,
+  },
+  promoCodeText: {
+    ...Typography.button,
+    color: Colors.textInverse,
+    fontSize: fscale(13),
+    letterSpacing: 0,
+  },
+  promoGift: {
+    width: fscale(64),
+    height: fscale(64),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // ── Recent rides ──
+  card: {
+    backgroundColor: Colors.bgWhite,
+    borderRadius: Radii.xl,
+    overflow: 'hidden',
+    marginBottom: Spacing.md,
+  },
+  rideRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: fscale(13),
+    gap: Spacing.md,
+  },
+  rideIconWrap: {
+    width: fscale(36),
+    height: fscale(36),
+    borderRadius: fscale(18),
+    backgroundColor: Colors.pillBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rideInfo: { flex: 1 },
+  rideRoute: {
+    ...Typography.bodySmall,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    fontSize: fscale(13),
+  },
+  rideType: {
+    ...Typography.caption,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    fontSize: fscale(11),
+  },
+  rideFareWrap: { alignItems: 'flex-end' },
+  rideFare: {
+    ...Typography.bodySmall,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    fontSize: fscale(13),
+  },
+  ridePaid: {
+    fontSize: fscale(11),
+    color: Colors.green,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.borderSoft,
+    marginHorizontal: Spacing.md,
+  },
+
+  // ── Wallet ──
+  walletCard: {
+    backgroundColor: Colors.ink,
+    borderRadius: Radii.xl,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: fscale(16),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  promoEyebrow: {
+  walletLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
+  walletIconWrap: {
+    width: fscale(38),
+    height: fscale(38),
+    borderRadius: Radii.sm,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  walletLabel: {
     ...Typography.label,
-    color: Colors.textSecondary,
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: fscale(10),
+    letterSpacing: 0.8,
     marginBottom: 2,
   },
-  promoTitle: { ...Typography.h4, color: Colors.textPrimary },
-  promoEmoji: { fontSize: fscale(32) },
+  walletAmount: {
+    fontSize: fscale(18),
+    fontWeight: '700',
+    color: Colors.textInverse,
+    letterSpacing: -0.3,
+  },
+  addMoneyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    paddingHorizontal: fscale(14),
+    paddingVertical: fscale(8),
+    borderRadius: Radii.pill,
+  },
+  addMoneyText: {
+    ...Typography.bodySmall,
+    color: Colors.textInverse,
+    fontWeight: '600',
+    fontSize: fscale(13),
+  },
+
+  // ── Quick actions ──
+  quickActionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
+  quickActionCard: {
+    flex: 1,
+    backgroundColor: Colors.bgWhite,
+    borderRadius: Radii.lg,
+    paddingVertical: fscale(16),
+    alignItems: 'center',
+    gap: Spacing.sm,
+    ...Shadows.card,
+  },
+  qaIconWrap: {
+    width: fscale(38),
+    height: fscale(38),
+    borderRadius: Radii.md,
+    backgroundColor: Colors.pillBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qaLabel: {
+    ...Typography.caption,
+    color: Colors.textPrimary,
+    fontWeight: '600',
+    fontSize: fscale(12),
+  },
 });
 
 export default HomeScreen;

@@ -1,11 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  Platform,
-} from 'react-native';
+import { View, Text, StyleSheet, Platform, Animated, Easing } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   request,
@@ -13,60 +7,43 @@ import {
   RESULTS,
   openSettings,
 } from 'react-native-permissions';
-import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
-import { NCButton } from '../../components/common';
-import {
-  Colors,
-  Typography,
-  Spacing,
-  fscale,
-  vscale,
-  Radii,
-} from '../../theme';
+import { NCButton, Icon } from '../../components/common';
+import type { IconName } from '../../components/common';
+import { MapView } from '../../components/map';
+import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocationPermission'>;
 
-const FEATURES = [
-  {
-    icon: '📍',
-    title: 'Precise pickup',
-    sub: 'Saves you time on every ride',
-  },
-  {
-    icon: '🗺️',
-    title: 'Live trip tracking',
-    sub: 'Share with friends & family',
-  },
-  {
-    icon: '🆘',
-    title: 'SOS in 1 tap',
-    sub: 'Send live location to emergency contacts',
-  },
+// Matches the reference's three feature rows exactly (icon, title, sub).
+const FEATURES: { icon: IconName; title: string; sub: string }[] = [
+  { icon: 'locate', title: 'Precise pickup', sub: 'Saves you time on every ride' },
+  { icon: 'route', title: 'Live trip tracking', sub: 'Share with friends & family' },
+  { icon: 'shield', title: 'SOS in 1 tap', sub: 'Send live location to emergency contacts' },
 ];
 
-const DEFAULT_REGION = {
-  latitude: 28.6139,
-  longitude: 77.209,
-  latitudeDelta: 0.05,
-  longitudeDelta: 0.05,
-};
-
 const LocationPermissionScreen = ({ navigation }: Props) => {
-  const [loading, setLoading] = useState(true);
-  const [locationGranted, setLocationGranted] = useState(false);
-  const mapRef = useRef<MapView>(null);
+  const [requesting, setRequesting] = useState(false);
+  const pulse = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    requestLocation();
-  }, []);
+    Animated.loop(
+      Animated.timing(pulse, {
+        toValue: 1,
+        duration: 1800,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ).start();
+  }, [pulse]);
 
-  const requestLocation = async () => {
+  const goHome = () => navigation.replace('HomeTabs');
+
+  const requestPermission = async () => {
     try {
-      setLoading(true);
-
+      setRequesting(true);
       const permission =
         Platform.OS === 'android'
           ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
@@ -74,108 +51,77 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
 
       const result = await request(permission);
 
-      if (result === RESULTS.GRANTED) {
-        setLocationGranted(true);
-        setLoading(false);
-      } else if (result === RESULTS.BLOCKED) {
-        setLoading(false);
-        setLocationGranted(false);
+      if (result === RESULTS.BLOCKED) {
         openSettings();
-      } else {
-        setLoading(false);
-        setLocationGranted(false);
       }
+      // Whether granted, denied, or blocked, the design moves straight to
+      // Home — permission state is handled later wherever location is
+      // actually used (matches the reference's go('home') on both buttons).
+      goHome();
     } catch (e) {
-      console.log(e);
-      setLoading(false);
+      goHome();
+    } finally {
+      setRequesting(false);
     }
   };
 
-  const onUserLocationChange = (event: any) => {
-    const { coordinate } = event.nativeEvent;
-    if (coordinate && mapRef.current) {
-      mapRef.current.animateToRegion(
-        {
-          latitude: coordinate.latitude,
-          longitude: coordinate.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        },
-        1000,
-      );
-    }
-  };
+  const pulseScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.8] });
+  const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0] });
 
   return (
     <ScreenShell
-      topColor={Colors.bgOffWhite}
-      bottomColor={Colors.bgOffWhite}
-      backgroundColor={Colors.bgOffWhite}
+      topColor={Colors.bgWhite}
+      bottomColor={Colors.bgWhite}
+      backgroundColor={Colors.bgWhite}
     >
       <View style={styles.container}>
-        <View style={styles.mapContainer}>
-          {loading ? (
-            <View style={styles.center}>
-              <ActivityIndicator size="large" color={Colors.primary} />
-              <Text style={styles.statusText}>Fetching your location...</Text>
-            </View>
-          ) : !locationGranted ? (
-            <View style={styles.center}>
-              <Text style={styles.bigEmoji}>📍</Text>
-              <Text style={styles.successTitle}>
-                Location Permission Required
-              </Text>
-              <Text style={styles.coord}>
-                Enable location access to continue.
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.mapWrapper}>
-              <MapView
-                ref={mapRef}
-                provider={PROVIDER_GOOGLE}
-                style={styles.map}
-                initialRegion={DEFAULT_REGION}
-                showsUserLocation={true}
-                showsMyLocationButton={false}
-                followsUserLocation={true}
-                onUserLocationChange={onUserLocationChange}
+        <View style={styles.mapWrap}>
+          <MapView height={fscale(320)} showRoute={false} showControls={false}>
+            <View style={styles.centerDotWrap}>
+              <Animated.View
+                style={[
+                  styles.pulseRing,
+                  { opacity: pulseOpacity, transform: [{ scale: pulseScale }] },
+                ]}
               />
+              <View style={styles.centerDot} />
             </View>
-          )}
+          </MapView>
         </View>
 
-        <Text style={styles.heading}>Allow precise location</Text>
+        <View style={styles.textBlock}>
+          <Text style={styles.heading}>Allow precise location</Text>
+          <Text style={styles.body}>
+            NCRide uses your location to find the closest driver, accurate
+            pickup, and live trip tracking. You can change this in Settings.
+          </Text>
 
-        <Text style={styles.body}>
-          NCRide uses your location to find nearby drivers, accurate pickup
-          points, and live trip tracking.
-        </Text>
-
-        <View style={styles.featureList}>
-          {FEATURES.map(item => (
-            <View key={item.title} style={styles.featureRow}>
-              <View style={styles.featureIcon}>
-                <Text>{item.icon}</Text>
+          <View style={styles.featureList}>
+            {FEATURES.map(f => (
+              <View key={f.title} style={styles.featureRow}>
+                <View style={styles.featureIcon}>
+                  <Icon name={f.icon} size={18} stroke={Colors.ink} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.featureTitle}>{f.title}</Text>
+                  <Text style={styles.featureSub}>{f.sub}</Text>
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.featureTitle}>{item.title}</Text>
-                <Text style={styles.featureSub}>{item.sub}</Text>
-              </View>
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
 
         <View style={{ flex: 1 }} />
 
-        {!locationGranted ? (
-          <NCButton label="Enable Location" onPress={requestLocation} />
-        ) : (
-          <NCButton
-            label="Continue"
-            onPress={() => navigation.replace('HomeTabs')}
-          />
-        )}
+        <NCButton
+          label="Allow precise location"
+          onPress={requestPermission}
+          loading={requesting}
+          variant="primary"
+          size="lg"
+          style={{ marginBottom: Spacing.sm }}
+        />
+        <NCButton label="Maybe later" onPress={goHome} variant="ghost" size="lg" />
       </View>
     </ScreenShell>
   );
@@ -185,78 +131,77 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: Spacing.screen,
-    paddingBottom: vscale(32),
+    paddingTop: vscale(16),
+    paddingBottom: vscale(40),
   },
-  mapContainer: {
-    height: vscale(260),
-    marginTop: vscale(16),
-    marginBottom: vscale(24),
-    borderRadius: Radii.xl,
-    overflow: 'hidden',
-    backgroundColor: '#F4F4F4',
-  },
-  mapWrapper: {
-    flex: 1,
+  mapWrap: {
     borderRadius: Radii.xl,
     overflow: 'hidden',
   },
-  map: {
-    flex: 1,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
+  centerDotWrap: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 0,
+    height: 0,
     alignItems: 'center',
-    paddingHorizontal: 24,
+    justifyContent: 'center',
   },
-  statusText: {
-    marginTop: 12,
-    ...Typography.body,
-    color: Colors.textSecondary,
+  pulseRing: {
+    position: 'absolute',
+    width: fscale(56),
+    height: fscale(56),
+    borderRadius: fscale(28),
+    backgroundColor: 'rgba(46,125,255,0.35)',
   },
-  bigEmoji: {
-    fontSize: 56,
-    marginBottom: 12,
+  centerDot: {
+    width: fscale(28),
+    height: fscale(28),
+    borderRadius: fscale(14),
+    backgroundColor: Colors.blue,
+    borderWidth: 5,
+    borderColor: '#fff',
   },
-  successTitle: {
-    ...Typography.h3,
-    textAlign: 'center',
-  },
-  coord: {
-    marginTop: 8,
-    textAlign: 'center',
-    color: Colors.textSecondary,
+  textBlock: {
+    marginTop: vscale(28),
   },
   heading: {
-    ...Typography.h2,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
+    fontSize: fscale(28),
+    fontWeight: '700',
+    letterSpacing: -0.8,
+    color: Colors.ink,
+    lineHeight: fscale(32.2),
   },
   body: {
-    ...Typography.body,
+    marginTop: Spacing.md,
+    fontSize: fscale(14.5),
     color: Colors.textSecondary,
-    marginBottom: 24,
+    lineHeight: fscale(21),
   },
-  featureList: {},
+  featureList: {
+    marginTop: vscale(18),
+    gap: vscale(10),
+  },
   featureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    gap: Spacing.md,
   },
   featureIcon: {
-    width: fscale(42),
-    height: fscale(42),
+    width: fscale(36),
+    height: fscale(36),
     borderRadius: Radii.md,
-    backgroundColor: Colors.pillBg,
-    justifyContent: 'center',
+    backgroundColor: Colors.borderSoft,
     alignItems: 'center',
-    marginRight: 12,
+    justifyContent: 'center',
   },
   featureTitle: {
-    ...Typography.h4,
+    fontSize: fscale(13.5),
+    fontWeight: '600',
+    color: Colors.ink,
   },
   featureSub: {
-    ...Typography.caption,
+    fontSize: fscale(12),
     color: Colors.textSecondary,
   },
 });

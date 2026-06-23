@@ -12,15 +12,8 @@ import {
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
-import { NCButton } from '../../components/common';
-import {
-  Colors,
-  Typography,
-  Spacing,
-  fscale,
-  vscale,
-  Radii,
-} from '../../theme';
+import { NCButton, Icon } from '../../components/common';
+import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OTPLogin'>;
 
@@ -56,9 +49,9 @@ const OTPLoginScreen = ({ navigation }: Props) => {
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
+            activeOpacity={0.75}
           >
-            <Text style={styles.backIcon}>‹</Text>
+            <Icon name="chevronLeft" size={20} stroke={Colors.ink} sw={2} />
           </TouchableOpacity>
 
           {/* Heading */}
@@ -89,7 +82,7 @@ const OTPLoginScreen = ({ navigation }: Props) => {
 
           {/* Privacy note */}
           <View style={styles.privacyRow}>
-            <View style={styles.privacyDot} />
+            <Icon name="shield" size={17} stroke={Colors.blue} />
             <Text style={styles.privacyText}>
               Your number is encrypted and never shared with drivers.
             </Text>
@@ -100,10 +93,13 @@ const OTPLoginScreen = ({ navigation }: Props) => {
 
           {/* CTA */}
           <NCButton
-            label="Send OTP →"
+            label="Send OTP"
+            iconRight="arrowRight"
             onPress={handleSend}
             loading={loading}
             disabled={!isValid}
+            variant="primary"
+            size="lg"
           />
 
           <Text style={styles.legal}>
@@ -126,31 +122,39 @@ const styles = StyleSheet.create({
   },
 
   backBtn: {
-    width: fscale(36),
-    height: fscale(36),
-    borderRadius: Radii.sm,
-    backgroundColor: Colors.pillBg,
+    width: fscale(40),
+    height: fscale(40),
+    borderRadius: Radii.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bgWhite,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: vscale(12),
+    marginTop: vscale(20),
     marginBottom: vscale(28),
   },
-  backIcon: { fontSize: fscale(22), color: Colors.textPrimary, marginTop: -2 },
 
   heading: {
-    ...Typography.h1,
-    color: Colors.textPrimary,
+    fontSize: fscale(30),
+    fontWeight: '800',
+    letterSpacing: -1,
+    color: Colors.ink,
+    lineHeight: fscale(33),
     marginBottom: Spacing.sm,
   },
   subheading: {
-    ...Typography.body,
+    fontSize: fscale(14),
     color: Colors.textSecondary,
+    lineHeight: fscale(20),
     marginBottom: vscale(32),
   },
 
   inputLabel: {
-    ...Typography.label,
-    color: Colors.textTertiary,
+    fontSize: fscale(11),
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     marginBottom: Spacing.sm,
   },
   inputRow: {
@@ -158,8 +162,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1.5,
     borderColor: Colors.borderFocus,
-    borderRadius: Radii.md,
-    height: fscale(52),
+    borderRadius: Radii.lg,
+    height: fscale(54),
     paddingHorizontal: Spacing.md,
     backgroundColor: Colors.inputBg,
     marginBottom: Spacing.md,
@@ -168,52 +172,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.xs,
+    flexShrink: 0,
   },
-  flag: { fontSize: fscale(16) },
-  dialCode: { ...Typography.h4, color: Colors.textPrimary },
+  flag: { fontSize: fscale(20) },
+  dialCode: { fontSize: fscale(15), fontWeight: '700', color: Colors.ink },
   divider: {
     width: 1,
-    height: fscale(20),
+    height: fscale(22),
     backgroundColor: Colors.border,
     marginHorizontal: Spacing.md,
   },
   input: {
     flex: 1,
-    ...Typography.h4,
-    color: Colors.textPrimary,
+    fontSize: fscale(18),
+    fontWeight: '700',
+    letterSpacing: 1,
+    color: Colors.ink,
     padding: 0,
   },
 
   privacyRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: Spacing.sm,
-    backgroundColor: '#EEF4FF',
-    borderRadius: Radii.md,
+    backgroundColor: 'rgba(46,125,255,0.06)',
+    borderRadius: Radii.lg,
     padding: Spacing.md,
   },
-  privacyDot: {
-    width: fscale(8),
-    height: fscale(8),
-    borderRadius: fscale(4),
-    backgroundColor: Colors.blue,
-    marginTop: fscale(4),
-  },
   privacyText: {
-    ...Typography.bodySmall,
-    color: Colors.textSecondary,
+    fontSize: fscale(12.5),
+    color: Colors.ink2,
+    lineHeight: fscale(17.5),
     flex: 1,
   },
 
   legal: {
-    ...Typography.caption,
+    fontSize: fscale(11.5),
     color: Colors.textTertiary,
     textAlign: 'center',
     marginTop: Spacing.md,
+    lineHeight: fscale(17.8),
   },
   legalLink: {
-    color: Colors.textPrimary,
-    textDecorationLine: 'underline',
+    color: Colors.ink,
+    fontWeight: '600',
   },
 });
 
