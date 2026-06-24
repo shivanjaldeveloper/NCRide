@@ -1,5 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ViewStyle,
+} from 'react-native';
 import Svg, {
   Rect,
   Path,
@@ -57,11 +63,10 @@ const MapView = ({
 }: Props) => {
   // Static sample point along the reference's route curve, used for the
   // (currently non-animated) vehicle marker.
-  const routeD =
-    'M 60 350 C 140 320, 200 260, 220 200 S 320 130, 380 100';
+  const routeD = 'M 60 350 C 140 320, 200 260, 220 200 S 320 130, 380 100';
 
   return (
-    <View style={[styles.wrap, { height }, style]}>
+    <View style={[styles.wrap, height ? { height } : null, , style]}>
       <Svg
         viewBox="0 0 440 440"
         width="100%"
@@ -93,16 +98,75 @@ const MapView = ({
           d="M -20 380 Q 100 360 220 400 Q 340 440 460 410 L 460 460 L -20 460 Z"
           fill={Colors.mapWater}
         />
-        <Path d="M 380 -20 Q 410 60 460 80 L 460 -20 Z" fill={Colors.mapWater} />
+        <Path
+          d="M 380 -20 Q 410 60 460 80 L 460 -20 Z"
+          fill={Colors.mapWater}
+        />
 
         {/* minor road grid */}
-        <Line x1="0" y1="60" x2="440" y2="80" stroke={Colors.mapRoadMinor} strokeWidth={6} strokeLinecap="round" />
-        <Line x1="0" y1="160" x2="440" y2="170" stroke={Colors.mapRoadMinor} strokeWidth={6} strokeLinecap="round" />
-        <Line x1="0" y1="260" x2="440" y2="280" stroke={Colors.mapRoadMinor} strokeWidth={6} strokeLinecap="round" />
-        <Line x1="0" y1="350" x2="440" y2="370" stroke={Colors.mapRoadMinor} strokeWidth={6} strokeLinecap="round" />
-        <Line x1="80" y1="0" x2="100" y2="440" stroke={Colors.mapRoadMinor} strokeWidth={6} strokeLinecap="round" />
-        <Line x1="200" y1="0" x2="220" y2="440" stroke={Colors.mapRoadMinor} strokeWidth={6} strokeLinecap="round" />
-        <Line x1="320" y1="0" x2="340" y2="440" stroke={Colors.mapRoadMinor} strokeWidth={6} strokeLinecap="round" />
+        <Line
+          x1="0"
+          y1="60"
+          x2="440"
+          y2="80"
+          stroke={Colors.mapRoadMinor}
+          strokeWidth={6}
+          strokeLinecap="round"
+        />
+        <Line
+          x1="0"
+          y1="160"
+          x2="440"
+          y2="170"
+          stroke={Colors.mapRoadMinor}
+          strokeWidth={6}
+          strokeLinecap="round"
+        />
+        <Line
+          x1="0"
+          y1="260"
+          x2="440"
+          y2="280"
+          stroke={Colors.mapRoadMinor}
+          strokeWidth={6}
+          strokeLinecap="round"
+        />
+        <Line
+          x1="0"
+          y1="350"
+          x2="440"
+          y2="370"
+          stroke={Colors.mapRoadMinor}
+          strokeWidth={6}
+          strokeLinecap="round"
+        />
+        <Line
+          x1="80"
+          y1="0"
+          x2="100"
+          y2="440"
+          stroke={Colors.mapRoadMinor}
+          strokeWidth={6}
+          strokeLinecap="round"
+        />
+        <Line
+          x1="200"
+          y1="0"
+          x2="220"
+          y2="440"
+          stroke={Colors.mapRoadMinor}
+          strokeWidth={6}
+          strokeLinecap="round"
+        />
+        <Line
+          x1="320"
+          y1="0"
+          x2="340"
+          y2="440"
+          stroke={Colors.mapRoadMinor}
+          strokeWidth={6}
+          strokeLinecap="round"
+        />
 
         {/* major roads */}
         <Path
@@ -119,9 +183,30 @@ const MapView = ({
           strokeWidth={14}
           strokeLinecap="round"
         />
-        <Path d="M 0 110 Q 200 90 440 130" fill="none" stroke="#EFE9DC" strokeWidth={10} strokeLinecap="round" opacity={0.9} />
-        <Path d="M 0 300 Q 220 320 440 290" fill="none" stroke="#EFE9DC" strokeWidth={10} strokeLinecap="round" opacity={0.9} />
-        <Path d="M 280 0 Q 320 200 360 440" fill="none" stroke="#EFE9DC" strokeWidth={10} strokeLinecap="round" opacity={0.9} />
+        <Path
+          d="M 0 110 Q 200 90 440 130"
+          fill="none"
+          stroke="#EFE9DC"
+          strokeWidth={10}
+          strokeLinecap="round"
+          opacity={0.9}
+        />
+        <Path
+          d="M 0 300 Q 220 320 440 290"
+          fill="none"
+          stroke="#EFE9DC"
+          strokeWidth={10}
+          strokeLinecap="round"
+          opacity={0.9}
+        />
+        <Path
+          d="M 280 0 Q 320 200 360 440"
+          fill="none"
+          stroke="#EFE9DC"
+          strokeWidth={10}
+          strokeLinecap="round"
+          opacity={0.9}
+        />
 
         {/* route */}
         {showRoute && (
@@ -133,14 +218,27 @@ const MapView = ({
               fill="none"
               strokeLinecap="round"
             />
-            <Path d={routeD} stroke="url(#routeg)" strokeWidth={5} fill="none" strokeLinecap="round" />
+            <Path
+              d={routeD}
+              stroke="url(#routeg)"
+              strokeWidth={5}
+              fill="none"
+              strokeLinecap="round"
+            />
           </>
         )}
 
         {/* pickup pin */}
         {showRoute && (
           <>
-            <Circle cx={60} cy={350} r={10} fill="#fff" stroke={Colors.green} strokeWidth={3} />
+            <Circle
+              cx={60}
+              cy={350}
+              r={10}
+              fill="#fff"
+              stroke={Colors.green}
+              strokeWidth={3}
+            />
             <Circle cx={60} cy={350} r={3.5} fill={Colors.green} />
           </>
         )}
@@ -159,7 +257,11 @@ const MapView = ({
       {showControls && (
         <View style={styles.controls}>
           {(['plus', 'minus', 'locate'] as const).map(n => (
-            <TouchableOpacity key={n} style={styles.controlBtn} activeOpacity={0.8}>
+            <TouchableOpacity
+              key={n}
+              style={styles.controlBtn}
+              activeOpacity={0.8}
+            >
               <Icon name={n} size={18} stroke={Colors.ink} sw={1.8} />
             </TouchableOpacity>
           ))}
@@ -176,7 +278,13 @@ const MapView = ({
             </Text>
           </View>
           <View style={styles.chip}>
-            <View style={[styles.chipDot, styles.chipDotSquare, { backgroundColor: Colors.ink }]} />
+            <View
+              style={[
+                styles.chipDot,
+                styles.chipDotSquare,
+                { backgroundColor: Colors.ink },
+              ]}
+            />
             <Text style={styles.chipText} numberOfLines={1}>
               {drop}
             </Text>

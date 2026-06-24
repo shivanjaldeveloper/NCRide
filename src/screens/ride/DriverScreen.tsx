@@ -71,7 +71,6 @@ const DriverScreen = ({ navigation }: Props) => {
       {/* Map absolute full-bleed behind sheet */}
       <View style={styles.mapArea}>
         <MapView
-          height={400}
           style={styles.mapFill}
           showRoute
           showControls={false}
@@ -175,10 +174,13 @@ const DriverScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.bgOffWhite },
   mapArea: {
-    height: '38%',
-    overflow: 'hidden',
+    flex: 1,
   },
-  mapFill: { borderRadius: 0, width: '100%', height: '100%' },
+  mapFill: {
+    flex: 1,
+    width: '100%',
+    borderRadius: 0,
+  },
   sosBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -189,9 +191,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.red,
   },
   sosText: { fontSize: fscale(12), fontWeight: '700', color: '#fff' },
-  sheetWrap: {
-    flex: 1,
-  },
 
   driverRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   avatarWrap: {

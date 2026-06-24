@@ -55,7 +55,6 @@ const Sheet = ({ children, style }: Props) => {
 
 const styles = StyleSheet.create({
   sheet: {
-    flex: 1,
     backgroundColor: Colors.bgWhite,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,

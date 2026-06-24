@@ -47,8 +47,6 @@ const HomeTabs = () => {
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: true,
-        tabBarPressColor: 'transparent',
-        tabBarPressOpacity: 1,
         tabBarStyle: [
           styles.tabBar,
           {
