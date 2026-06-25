@@ -195,10 +195,20 @@ const HomeScreen = ({ navigation }: Props) => {
             </View>
           </View>
           <View style={styles.headerIcons}>
-            <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
-              <Icon name="clock" size={16} stroke={Colors.ink} sw={1.7} />
+            <TouchableOpacity
+              style={styles.iconBtn}
+              activeOpacity={0.7}
+              onPress={() => navigation.getParent()?.navigate('SOS' as never)}
+            >
+              <Icon name="sos" size={16} stroke={Colors.red} sw={1.7} />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconBtn} activeOpacity={0.7}>
+            <TouchableOpacity
+              style={styles.iconBtn}
+              activeOpacity={0.7}
+              onPress={() =>
+                navigation.getParent()?.navigate('Notifications' as never)
+              }
+            >
               <Icon name="bell" size={16} stroke={Colors.ink} sw={1.7} />
             </TouchableOpacity>
           </View>
@@ -377,6 +387,14 @@ const HomeScreen = ({ navigation }: Props) => {
               key={qa.id}
               style={styles.quickActionCard}
               activeOpacity={0.75}
+              onPress={() => {
+                if (qa.id === 'coupons')
+                  navigation.getParent()?.navigate('Coupons' as never);
+                else if (qa.id === 'rewards')
+                  navigation.getParent()?.navigate('Rewards' as never);
+                else if (qa.id === 'refer')
+                  navigation.getParent()?.navigate('Referrals' as never);
+              }}
             >
               <View style={styles.qaIconWrap}>
                 <Icon name={qa.icon} size={18} stroke={Colors.ink} sw={1.7} />
@@ -825,5 +843,4 @@ const styles = StyleSheet.create({
     fontSize: fscale(12),
   },
 });
-
 export default HomeScreen;

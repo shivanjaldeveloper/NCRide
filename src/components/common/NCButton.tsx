@@ -31,6 +31,7 @@ interface Props {
   size?: NCButtonSize;
   icon?: IconName | string;
   iconRight?: IconName | string;
+  iconColor?: string;
   loading?: boolean;
   disabled?: boolean;
   style?: ViewStyle;
@@ -86,6 +87,7 @@ const NCButton = ({
   size = 'md',
   icon,
   iconRight,
+  iconColor,
   loading = false,
   disabled = false,
   style,
@@ -123,7 +125,14 @@ const NCButton = ({
         <ActivityIndicator color={v.color} size="small" />
       ) : (
         <>
-          {icon && <Icon name={icon} size={18} stroke={v.color} sw={1.8} />}
+          {icon && (
+            <Icon
+              name={icon}
+              size={18}
+              stroke={iconColor || v.color}
+              sw={1.8}
+            />
+          )}
           <Text
             style={[
               styles.label,
@@ -134,7 +143,12 @@ const NCButton = ({
             {label}
           </Text>
           {iconRight && (
-            <Icon name={iconRight} size={18} stroke={v.color} sw={1.8} />
+            <Icon
+              name={iconRight}
+              size={18}
+              stroke={iconColor || v.color}
+              sw={1.8}
+            />
           )}
         </>
       )}

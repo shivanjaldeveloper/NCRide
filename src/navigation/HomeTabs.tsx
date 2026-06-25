@@ -1,36 +1,19 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { Text, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { HomeTabParamList } from './types';
 import HomeScreen from '../screens/home/HomeScreen';
+import Activity from '../screens/activity/ActivityScreen';
+import WalletScreen from '../screens/wallet/WalletScreen';
+import AccountScreen from '../screens/profile/AccountScreen';
+
 import { Colors, Typography, fscale } from '../theme';
 
 import { Icon } from '../components/common';
 import type { IconName } from '../components/common';
 
 const Tab = createBottomTabNavigator<HomeTabParamList>();
-
-// Placeholder screens for future development
-const PlaceholderScreen = ({ name }: { name: string }) => (
-  <View
-    style={{
-      flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: Colors.bgOffWhite,
-    }}
-  >
-    <Text style={{ ...Typography.h3, color: Colors.textSecondary }}>
-      {name}
-    </Text>
-    <Text
-      style={{ ...Typography.body, color: Colors.textTertiary, marginTop: 8 }}
-    >
-      Coming soon
-    </Text>
-  </View>
-);
 
 const TAB_ICONS: Record<keyof HomeTabParamList, IconName> = {
   Home: 'home',
@@ -70,18 +53,9 @@ const HomeTabs = () => {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen
-        name="Activity"
-        children={() => <PlaceholderScreen name="Activity" />}
-      />
-      <Tab.Screen
-        name="Wallet"
-        children={() => <PlaceholderScreen name="Wallet" />}
-      />
-      <Tab.Screen
-        name="Account"
-        children={() => <PlaceholderScreen name="Account" />}
-      />
+      <Tab.Screen name="Activity" component={Activity} />
+      <Tab.Screen name="Wallet" component={WalletScreen} />
+      <Tab.Screen name="Account" component={AccountScreen} />
     </Tab.Navigator>
   );
 };

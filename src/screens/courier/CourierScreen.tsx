@@ -164,7 +164,7 @@ const CourierScreen = ({ navigation }: Props) => {
             <NCButton
               label="Book courier · ₹99"
               iconRight="arrowRight"
-              onPress={() => navigation.navigate('Driver')}
+              onPress={() => navigation.navigate('CourierSummary')}
               variant="primary"
               size="lg"
             />

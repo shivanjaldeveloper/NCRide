@@ -18,6 +18,7 @@ import Svg, {
 } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Image } from 'react-native';
 
 import type { RootStackParamList } from '../../navigation/types';
 import { Colors, fscale } from '../../theme';
@@ -136,45 +137,18 @@ const SplashScreen = ({ navigation }: Props) => {
       <Animated.View
         style={[
           styles.logoBox,
-          { opacity: logoOpacity, transform: [{ scale: logoScale }] },
+          {
+            opacity: logoOpacity,
+            transform: [{ scale: logoScale }],
+          },
         ]}
       >
-        <Svg
-          width={fscale(64)}
-          height={fscale(64)}
-          viewBox="0 0 64 64"
-          fill="none"
-        >
-          <Path d="M10 42 L14 26 H50 L54 42 V46 H10Z" fill={Colors.ink} />
-          <Rect
-            x={16}
-            y={28}
-            width={32}
-            height={12}
-            rx={3}
-            fill="#9AC8FF"
-            opacity={0.85}
-          />
-          <Circle
-            cx={20}
-            cy={46}
-            r={5}
-            fill={Colors.ink}
-            stroke={Colors.lime}
-            strokeWidth={2}
-          />
-          <Circle
-            cx={44}
-            cy={46}
-            r={5}
-            fill={Colors.ink}
-            stroke={Colors.lime}
-            strokeWidth={2}
-          />
-          <Path d="M28 28 L34 20 L40 28Z" fill={Colors.lime} opacity={0.7} />
-        </Svg>
+        <Image
+          source={require('../../assets/images/a.png')}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
       </Animated.View>
-
       <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
         <Text style={styles.brandName}>NCRide</Text>
         <Text style={styles.brandSub}>NOIDA · DELHI NCR RIDES</Text>
@@ -214,6 +188,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.ink,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  logoImage: {
+    width: fscale(90),
+    height: fscale(90),
   },
   logoBox: {
     width: fscale(110),

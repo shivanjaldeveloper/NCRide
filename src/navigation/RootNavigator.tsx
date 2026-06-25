@@ -20,6 +20,18 @@ import PayRideScreen from '../screens/ride/PayRideScreen';
 import ReceiptScreen from '../screens/ride/ReceiptScreen';
 import InvoiceReceiptScreen from '../screens/ride/InvoiceReceiptScreen';
 import CourierScreen from '../screens/courier/CourierScreen';
+import CourierSummary from '../screens/courier/CourierSummaryScreen';
+import CourierPayment from '../screens/courier/CourierPaymentScreen';
+import CourierConfirmed from '../screens/courier/CourierConfirmedScreen';
+import BookingDetail from '../screens/activity/BookingDetailScreen';
+import CouponsScreen from '../screens/wallet/CouponsScreen';
+import RewardsScreen from '../screens/wallet/RewardsScreen';
+import NotificationsScreen from '../screens/wallet/NotificationsScreen';
+import SavedPlacesScreen from '../screens/profile/SavedPlacesScreen';
+import ReferralsScreen from '../screens/profile/ReferralsScreen';
+import PaymentMethodsScreen from '../screens/profile/PaymentMethodsScreen';
+import SettingsScreen from '../screens/profile/SettingsScreen';
+import LogoutScreen from '../screens/profile/LogoutScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -109,6 +121,70 @@ const RootNavigator = () => (
         name="Courier"
         component={CourierScreen}
         options={{ animation: 'slide_from_bottom', gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="CourierSummary"
+        component={CourierSummary}
+        options={{ animation: 'slide_from_right', gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="CourierPayment"
+        component={CourierPayment}
+        options={{ animation: 'slide_from_right', gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="CourierConfirmed"
+        component={CourierConfirmed}
+        options={{ animation: 'slide_from_right', gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="BookingDetail"
+        component={BookingDetail}
+        options={{ animation: 'slide_from_right', gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="Coupons"
+        component={CouponsScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="Rewards"
+        component={RewardsScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="SavedPlaces"
+        component={SavedPlacesScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="Referrals"
+        component={ReferralsScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="PaymentMethods"
+        component={PaymentMethodsScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="Settings"
+        component={SettingsScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="Logout"
+        component={LogoutScreen}
+        options={{
+          animation: 'slide_from_bottom',
+          gestureEnabled: true,
+          presentation: 'transparentModal',
+        }}
       />
     </Stack.Navigator>
   </NavigationContainer>

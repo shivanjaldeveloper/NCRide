@@ -16,6 +16,18 @@ export type RootStackParamList = {
   Receipt: undefined;
   InvoiceReceipt: undefined;
   Courier: undefined;
+  CourierSummary: undefined;
+  CourierPayment: undefined;
+  CourierConfirmed: undefined;
+  BookingDetail: { id: string; title: string; icon?: string };
+  Coupons: undefined;
+  Rewards: undefined;
+  Notifications: undefined;
+  SavedPlaces: undefined;
+  Referrals: undefined;
+  PaymentMethods: undefined;
+  Settings: undefined;
+  Logout: undefined;
 };
 
 export type HomeTabParamList = {
