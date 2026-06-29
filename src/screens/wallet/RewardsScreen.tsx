@@ -7,6 +7,8 @@ import { HeaderBack } from '../../components/layout';
 import { NCButton, NCCard, Icon, Row } from '../../components/common';
 import type { IconName } from '../../components/common';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
+import LinearGradient from 'react-native-linear-gradient';
+import Svg, { Defs, RadialGradient, Stop, Ellipse } from 'react-native-svg';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Rewards'>;
 
@@ -52,6 +54,7 @@ const REDEEMABLES: Redeemable[] = [
 
 const RewardsScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
+  const [cardSize, setCardSize] = React.useState({ w: 0, h: 0 });
 
   return (
     <View style={styles.root}>
@@ -69,8 +72,37 @@ const RewardsScreen = ({ navigation }: Props) => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.pointsCard}>
-          <View style={styles.glow} />
+        <View
+          style={styles.pointsCard}
+          onLayout={e => {
+            const { width, height } = e.nativeEvent.layout;
+            setCardSize({ w: width, h: height });
+          }}
+        >
+          {cardSize.w > 0 && (
+            <Svg
+              width={cardSize.w}
+              height={cardSize.h}
+              style={StyleSheet.absoluteFill}
+              pointerEvents="none"
+            >
+              <Defs>
+                <RadialGradient id="cardGlowBlue" cx="50%" cy="50%" r="50%">
+                  <Stop offset="0%" stopColor="#2E7DFF" stopOpacity="0.55" />
+                  <Stop offset="50%" stopColor="#1A4FCC" stopOpacity="0.15" />
+                  <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
+                </RadialGradient>
+              </Defs>
+              {/* Top-right bloom — anchored in real pixels */}
+              <Ellipse
+                cx={cardSize.w * 0.85}
+                cy={cardSize.h * 0.1}
+                rx={cardSize.w * 0.65}
+                ry={cardSize.h * 1.1}
+                fill="url(#cardGlowBlue)"
+              />
+            </Svg>
+          )}
           <View style={styles.pointsRow}>
             <View>
               <Text style={styles.label}>YOU HAVE</Text>
@@ -85,7 +117,12 @@ const RewardsScreen = ({ navigation }: Props) => {
 
           <Text style={styles.progressLabel}>160 PTS TO PLATINUM</Text>
           <View style={styles.progressTrack}>
-            <View style={styles.progressFill} />
+            <LinearGradient
+              colors={['#3478F6', '#5A9DF9', '#84C8E6', '#A7DB9B', '#C7F14C']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.progressFill}
+            />
           </View>
           <View style={styles.tierRow}>
             <Text style={styles.tierText}>SAPPHIRE</Text>
@@ -194,15 +231,16 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 6,
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.12)',
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    marginTop: 6,
     overflow: 'hidden',
+    marginTop: 6,
   },
   progressFill: {
     width: '84%',
     height: '100%',
-    backgroundColor: Colors.lime,
+    borderRadius: 3,
   },
   tierRow: {
     flexDirection: 'row',

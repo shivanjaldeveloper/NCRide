@@ -10,6 +10,8 @@ import type {
 import { TopSafeStrap } from '../../components/layout';
 import { NCCard, Icon, Row } from '../../components/common';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
+import { useTranslation } from '../../i18n';
+import { LANGUAGE_OPTIONS } from '../../i18n/translations';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<HomeTabParamList, 'Account'>,
@@ -17,8 +19,12 @@ type Props = CompositeScreenProps<
 >;
 
 const AccountScreen = ({ navigation }: Props) => {
+  const { t, locale } = useTranslation();
   const go = (route: keyof RootStackParamList) =>
     navigation.getParent()?.navigate(route as never);
+
+  const currentLangLabel =
+    LANGUAGE_OPTIONS.find(o => o.locale === locale)?.nativeLabel ?? 'English';
 
   return (
     <View style={styles.root}>
@@ -31,7 +37,7 @@ const AccountScreen = ({ navigation }: Props) => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Account</Text>
+        <Text style={styles.title}>{t.account.title}</Text>
 
         <NCCard pad={16} style={styles.profileCard}>
           <View style={styles.profileRow}>
@@ -45,7 +51,7 @@ const AccountScreen = ({ navigation }: Props) => {
               </Text>
               <View style={styles.tierBadge}>
                 <Icon name="reward" size={12} stroke={Colors.lime} />
-                <Text style={styles.tierText}>SAPPHIRE TIER</Text>
+                <Text style={styles.tierText}>{t.account.tierLabel}</Text>
               </View>
             </View>
           </View>
@@ -54,66 +60,75 @@ const AccountScreen = ({ navigation }: Props) => {
         <NCCard pad={4} style={styles.menuCard}>
           <Row
             icon="pin"
-            title="Saved places"
-            sub="5 saved · Home, Work, Gym…"
+            title={t.account.savedPlaces}
+            sub={t.account.savedPlacesSub}
             onPress={() => go('SavedPlaces')}
           />
           <Row
             icon="wallet"
-            title="Wallet"
+            title={t.account.wallet}
             sub="₹ 2,184.50"
             onPress={() => navigation.navigate('Wallet')}
           />
           <Row
             icon="card"
-            title="Payment methods"
-            sub="UPI · 1 card · 4 saved"
+            title={t.account.paymentMethods}
+            sub={t.account.paymentMethodsSub}
             onPress={() => go('PaymentMethods')}
           />
           <Row
             icon="coupon"
-            title="Coupons & offers"
-            sub="3 new offers"
+            title={t.account.coupons}
+            sub={t.account.couponsSub}
             onPress={() => go('Coupons')}
           />
           <Row
             icon="reward"
-            title="Rewards"
-            sub="840 points · Sapphire"
+            title={t.account.rewards}
+            sub={t.account.rewardsSub}
             onPress={() => go('Rewards')}
           />
           <Row
             icon="refer"
-            title="Refer & earn"
-            sub="Earn ₹500 per invite"
+            title={t.account.referEarn}
+            sub={t.account.referEarnSub}
             onPress={() => go('Referrals')}
           />
         </NCCard>
 
         <NCCard pad={4} style={styles.menuCard}>
-          <Row icon="chat" title="Help & support" onPress={() => go('SOS')} />
+          <Row
+            icon="chat"
+            title={t.account.helpSupport}
+            onPress={() => go('SOS')}
+          />
           <Row
             icon="sos"
-            title="SOS contacts"
-            sub="3 added"
+            title={t.account.sosContacts}
+            sub={t.account.sosContactsSub}
             onPress={() => go('SOS')}
           />
           <Row
             icon="settings"
-            title="Settings"
+            title={t.account.settings}
             onPress={() => go('Settings')}
+          />
+          {/* Language switcher */}
+          <Row
+            icon="edit"
+            title={t.account.language}
+            sub={currentLangLabel}
+            onPress={() => go('LanguageSelect')}
           />
           <Row
             icon="logout"
-            title="Log out"
+            title={t.account.logout}
             danger
             onPress={() => go('Logout')}
           />
         </NCCard>
 
-        <Text style={styles.footer}>
-          NCRide · v 1.0.0 · Made for Noida &amp; Delhi NCR
-        </Text>
+        <Text style={styles.footer}>{t.common.appVersion}</Text>
       </ScrollView>
     </View>
   );

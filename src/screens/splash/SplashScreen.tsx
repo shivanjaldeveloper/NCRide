@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import Svg, {
   Path,
-  Rect,
   Circle,
   Defs,
   RadialGradient,
@@ -22,6 +21,7 @@ import { Image } from 'react-native';
 
 import type { RootStackParamList } from '../../navigation/types';
 import { Colors, fscale } from '../../theme';
+import { getPersistedLocale } from '../../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
@@ -72,8 +72,15 @@ const SplashScreen = ({ navigation }: Props) => {
       }),
     ).start();
 
-    const timer = setTimeout(() => {
-      navigation.replace('Onboarding');
+    const timer = setTimeout(async () => {
+      const savedLocale = await getPersistedLocale();
+      if (savedLocale) {
+        // Returning user — language already chosen, go to Onboarding
+        navigation.replace('Onboarding');
+      } else {
+        // First launch — pick language first
+        navigation.replace('LanguageSelect');
+      }
     }, SPLASH_DURATION_MS);
 
     return () => clearTimeout(timer);

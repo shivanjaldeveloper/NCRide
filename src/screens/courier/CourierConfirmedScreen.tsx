@@ -93,13 +93,13 @@ const CourierConfirmedScreen = ({ navigation }: Props) => (
       <NCCard style={styles.pointsCard}>
         <View style={styles.pointsRow}>
           <View style={styles.pointsIconWrap}>
-            <Icon name="reward" size={20} stroke={Colors.lime} />
+            <Icon name="reward" size={20} stroke={Colors.ink} />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.pointsSub}>You earned</Text>
             <Text style={styles.pointsVal}>+99 NCRide points</Text>
           </View>
-          <Icon name="chevron" size={18} stroke="rgba(255,255,255,0.6)" />
+          <Icon name="chevron" size={18} stroke={Colors.ink} />
         </View>
       </NCCard>
 
@@ -123,20 +123,10 @@ const CourierConfirmedScreen = ({ navigation }: Props) => (
           <Text style={styles.shareBtnText}>Receipt</Text>
         </TouchableOpacity>
       </View>
-
-      <NCButton
-        label="Track courier"
-        iconRight="arrowRight"
-        onPress={() => navigation.navigate('Tracking')}
-        variant="primary"
-        size="lg"
-        style={styles.trackBtn}
-      />
-
       <NCButton
         label="Back to home"
         onPress={() => navigation.navigate('HomeTabs')}
-        variant="ghost"
+        variant="primary"
         size="lg"
         style={styles.homeBtn}
       />
@@ -271,20 +261,24 @@ const styles = StyleSheet.create({
 
   pointsCard: {
     marginTop: Spacing.md,
-    backgroundColor: Colors.ink,
-    borderColor: 'transparent',
+    backgroundColor: Colors.bgLight,
+    borderColor: Colors.ink,
   },
   pointsRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   pointsIconWrap: {
     width: fscale(38),
     height: fscale(38),
     borderRadius: Radii.md,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: Colors.bgLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pointsSub: { fontSize: fscale(12.5), color: 'rgba(255,255,255,0.6)' },
-  pointsVal: { fontSize: fscale(15), fontWeight: '700', color: '#fff' },
+  pointsSub: { fontSize: fscale(12.5), color: Colors.transparent },
+  pointsVal: {
+    fontSize: fscale(15),
+    fontWeight: '700',
+    color: Colors.transparent,
+  },
 
   actionRow: {
     flexDirection: 'row',
@@ -305,7 +299,6 @@ const styles = StyleSheet.create({
   },
   shareBtnText: { fontSize: fscale(14), fontWeight: '600', color: Colors.ink },
 
-  trackBtn: { marginTop: Spacing.md },
   homeBtn: { marginTop: Spacing.sm },
 });
 

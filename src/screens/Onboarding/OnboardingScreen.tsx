@@ -14,20 +14,22 @@ import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
 import { NCButton } from '../../components/common';
 import { Colors, Spacing, fscale, vscale, SCREEN } from '../../theme';
-import { SLIDES } from './onboardingData';
 import {
   Onb1Illustration,
   Onb2Illustration,
   Onb3Illustration,
 } from './OnboardingIllustrations';
+import { useTranslation } from '../../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
 const ILLUSTRATIONS = [Onb1Illustration, Onb2Illustration, Onb3Illustration];
 
 const OnboardingScreen = ({ navigation }: Props) => {
+  const { t } = useTranslation();
   const flatListRef = useRef<FlatList>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const SLIDES = t.onboarding.slides;
   const isLast = activeIndex === SLIDES.length - 1;
 
   const handleNext = () => {
@@ -78,14 +80,14 @@ const OnboardingScreen = ({ navigation }: Props) => {
         onPress={handleSkip}
         activeOpacity={0.7}
       >
-        <Text style={styles.skipText}>Skip</Text>
+        <Text style={styles.skipText}>{t.common.skip}</Text>
       </TouchableOpacity>
 
       <FlatList
         ref={flatListRef}
         data={SLIDES}
         renderItem={renderSlide}
-        keyExtractor={item => item.id}
+        keyExtractor={(_, i) => String(i)}
         horizontal
         pagingEnabled
         decelerationRate="fast"
@@ -105,7 +107,7 @@ const OnboardingScreen = ({ navigation }: Props) => {
         </View>
 
         <NCButton
-          label={isLast ? 'Get started' : 'Next'}
+          label={isLast ? t.common.getStarted : t.common.next}
           onPress={handleNext}
           variant="primary"
           size="lg"

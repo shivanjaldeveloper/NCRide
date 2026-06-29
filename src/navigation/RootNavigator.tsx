@@ -3,10 +3,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { RootStackParamList } from './types';
 
+import { I18nProvider } from '../i18n';
+
 import SplashScreen from '../screens/splash/SplashScreen';
 import OnboardingScreen from '../screens/Onboarding/OnboardingScreen';
-import OTPLoginScreen from '../../src/screens/auth/OTPLoginScreen';
-import OTPVerifyScreen from '../../src/screens/auth/OTPVerifyScreen';
+import LanguageSelectScreen from '../screens/language/LanguageSelectScreen';
+import OTPLoginScreen from '../screens/auth/OTPLoginScreen';
+import OTPVerifyScreen from '../screens/auth/OTPVerifyScreen';
 import LocationPermissionScreen from '../screens/Permissions/LocationPermissionScreen';
 import HomeTabs from './HomeTabs';
 import RideScreen from '../screens/ride/RideScreen';
@@ -35,18 +38,23 @@ import LogoutScreen from '../screens/profile/LogoutScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const RootNavigator = () => (
+const AppNavigator = () => (
   <NavigationContainer>
     <Stack.Navigator
       initialRouteName="Splash"
       screenOptions={{
         headerShown: false,
         animation: 'fade',
-        gestureEnabled: false, // splash/onboarding should not swipe back
+        gestureEnabled: false,
       }}
     >
       <Stack.Screen name="Splash" component={SplashScreen} />
       <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      <Stack.Screen
+        name="LanguageSelect"
+        component={LanguageSelectScreen}
+        options={{ animation: 'slide_from_right' }}
+      />
       <Stack.Screen
         name="OTPLogin"
         component={OTPLoginScreen}
@@ -188,6 +196,13 @@ const RootNavigator = () => (
       />
     </Stack.Navigator>
   </NavigationContainer>
+);
+
+// I18nProvider wraps the entire navigator so every screen has access
+const RootNavigator = () => (
+  <I18nProvider>
+    <AppNavigator />
+  </I18nProvider>
 );
 
 export default RootNavigator;

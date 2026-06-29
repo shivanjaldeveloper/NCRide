@@ -1,5 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Platform, Animated, Easing } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Platform,
+  Animated,
+  Easing,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
   request,
@@ -7,24 +14,20 @@ import {
   RESULTS,
   openSettings,
 } from 'react-native-permissions';
-
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
 import { NCButton, Icon } from '../../components/common';
 import type { IconName } from '../../components/common';
 import { MapView } from '../../components/map';
 import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
+import { useTranslation } from '../../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocationPermission'>;
 
-// Matches the reference's three feature rows exactly (icon, title, sub).
-const FEATURES: { icon: IconName; title: string; sub: string }[] = [
-  { icon: 'locate', title: 'Precise pickup', sub: 'Saves you time on every ride' },
-  { icon: 'route', title: 'Live trip tracking', sub: 'Share with friends & family' },
-  { icon: 'shield', title: 'SOS in 1 tap', sub: 'Send live location to emergency contacts' },
-];
+const FEATURE_ICONS: IconName[] = ['locate', 'route', 'shield'];
 
 const LocationPermissionScreen = ({ navigation }: Props) => {
+  const { t } = useTranslation();
   const [requesting, setRequesting] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
 
@@ -48,15 +51,8 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
         Platform.OS === 'android'
           ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
           : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
-
       const result = await request(permission);
-
-      if (result === RESULTS.BLOCKED) {
-        openSettings();
-      }
-      // Whether granted, denied, or blocked, the design moves straight to
-      // Home — permission state is handled later wherever location is
-      // actually used (matches the reference's go('home') on both buttons).
+      if (result === RESULTS.BLOCKED) openSettings();
       goHome();
     } catch (e) {
       goHome();
@@ -65,8 +61,14 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
     }
   };
 
-  const pulseScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.8] });
-  const pulseOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0] });
+  const pulseScale = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.8],
+  });
+  const pulseOpacity = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 0],
+  });
 
   return (
     <ScreenShell
@@ -90,17 +92,14 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
         </View>
 
         <View style={styles.textBlock}>
-          <Text style={styles.heading}>Allow precise location</Text>
-          <Text style={styles.body}>
-            NCRide uses your location to find the closest driver, accurate
-            pickup, and live trip tracking. You can change this in Settings.
-          </Text>
+          <Text style={styles.heading}>{t.permission.heading}</Text>
+          <Text style={styles.body}>{t.permission.body}</Text>
 
           <View style={styles.featureList}>
-            {FEATURES.map(f => (
-              <View key={f.title} style={styles.featureRow}>
+            {t.permission.features.map((f, i) => (
+              <View key={i} style={styles.featureRow}>
                 <View style={styles.featureIcon}>
-                  <Icon name={f.icon} size={18} stroke={Colors.ink} />
+                  <Icon name={FEATURE_ICONS[i]} size={18} stroke={Colors.ink} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.featureTitle}>{f.title}</Text>
@@ -114,14 +113,19 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
         <View style={{ flex: 1 }} />
 
         <NCButton
-          label="Allow precise location"
+          label={t.permission.allowBtn}
           onPress={requestPermission}
           loading={requesting}
           variant="primary"
           size="lg"
           style={{ marginBottom: Spacing.sm }}
         />
-        <NCButton label="Maybe later" onPress={goHome} variant="ghost" size="lg" />
+        <NCButton
+          label={t.permission.laterBtn}
+          onPress={goHome}
+          variant="ghost"
+          size="lg"
+        />
       </View>
     </ScreenShell>
   );
@@ -134,10 +138,7 @@ const styles = StyleSheet.create({
     paddingTop: vscale(16),
     paddingBottom: vscale(40),
   },
-  mapWrap: {
-    borderRadius: Radii.xl,
-    overflow: 'hidden',
-  },
+  mapWrap: { borderRadius: Radii.xl, overflow: 'hidden' },
   centerDotWrap: {
     position: 'absolute',
     top: '50%',
@@ -162,9 +163,7 @@ const styles = StyleSheet.create({
     borderWidth: 5,
     borderColor: '#fff',
   },
-  textBlock: {
-    marginTop: vscale(28),
-  },
+  textBlock: { marginTop: vscale(28) },
   heading: {
     fontSize: fscale(28),
     fontWeight: '700',
@@ -178,15 +177,8 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     lineHeight: fscale(21),
   },
-  featureList: {
-    marginTop: vscale(18),
-    gap: vscale(10),
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
+  featureList: { marginTop: vscale(18), gap: vscale(10) },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   featureIcon: {
     width: fscale(36),
     height: fscale(36),
@@ -200,10 +192,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.ink,
   },
-  featureSub: {
-    fontSize: fscale(12),
-    color: Colors.textSecondary,
-  },
+  featureSub: { fontSize: fscale(12), color: Colors.textSecondary },
 });
 
 export default LocationPermissionScreen;

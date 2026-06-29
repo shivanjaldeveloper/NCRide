@@ -17,23 +17,18 @@ import { TopSafeStrap } from '../../components/layout';
 import { NCCard, Icon } from '../../components/common';
 import type { IconName } from '../../components/common';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
+import { useTranslation } from '../../i18n';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<HomeTabParamList, 'Wallet'>,
   NativeStackScreenProps<RootStackParamList>
 >;
 
-interface QuickStat {
-  icon: IconName;
-  value: string;
-  label: string;
-  route: 'Coupons' | 'Rewards' | 'Referrals';
-}
 
-const QUICK_STATS: QuickStat[] = [
-  { icon: 'coupon', value: '3', label: 'Coupons', route: 'Coupons' },
-  { icon: 'reward', value: '840', label: 'Points', route: 'Rewards' },
-  { icon: 'refer', value: '₹500', label: 'Refer', route: 'Referrals' },
+const QUICK_STATS_BASE: { icon: IconName; value: string; key: 'coupons' | 'points' | 'refer'; route: 'Coupons' | 'Rewards' | 'Referrals' }[] = [
+  { icon: 'coupon', value: '3', key: 'coupons', route: 'Coupons' },
+  { icon: 'reward', value: '840', key: 'points', route: 'Rewards' },
+  { icon: 'refer', value: '₹500', key: 'refer', route: 'Referrals' },
 ];
 
 interface Transaction {
@@ -90,8 +85,11 @@ const TRANSACTIONS: Transaction[] = [
 ];
 
 const WalletScreen = ({ navigation }: Props) => {
+  const { t } = useTranslation();
   const goTo = (route: 'Coupons' | 'Rewards' | 'Referrals') =>
     navigation.getParent()?.navigate(route as never);
+
+  const QUICK_STATS = QUICK_STATS_BASE.map(s => ({ ...s, label: t.wallet[s.key] }));
 
   return (
     <View style={styles.root}>
@@ -104,7 +102,7 @@ const WalletScreen = ({ navigation }: Props) => {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Wallet</Text>
+        <Text style={styles.title}>{t.wallet.title}</Text>
 
         {/* Balance card */}
         <View style={styles.balanceCard}>
@@ -139,7 +137,7 @@ const WalletScreen = ({ navigation }: Props) => {
         </View>
 
         {/* Transactions */}
-        <Text style={styles.sectionLabel}>TRANSACTIONS</Text>
+        <Text style={styles.sectionLabel}>{t.wallet.transactionsLabel}</Text>
         <NCCard pad={4}>
           {TRANSACTIONS.map((t, i) => (
             <View key={t.title}>

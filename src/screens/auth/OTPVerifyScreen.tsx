@@ -11,17 +11,25 @@ import {
   ScrollView,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { check, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
 import { NCButton, Icon } from '../../components/common';
 import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
+import { useTranslation } from '../../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OTPVerify'>;
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 42;
 
+const locationPermission =
+  Platform.OS === 'android'
+    ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
+    : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
+
 const OTPVerifyScreen = ({ navigation, route }: Props) => {
+  const { t } = useTranslation();
   const { phone } = route.params;
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
@@ -30,32 +38,27 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
 
   useEffect(() => {
     if (countdown <= 0) return;
-    const t = setInterval(() => setCountdown(c => c - 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setCountdown(c => c - 1), 1000);
+    return () => clearInterval(timer);
   }, [countdown]);
 
   const otpString = otp.join('');
 
   const handleChange = (text: string, index: number) => {
-    const digit = text.replace(/[^0-9]/g, '').slice(-1); // take last digit only
+    const digit = text.replace(/[^0-9]/g, '').slice(-1);
     const newOtp = [...otp];
     newOtp[index] = digit;
     setOtp(newOtp);
-    // move focus forward
-    if (digit && index < OTP_LENGTH - 1) {
-      inputRefs.current[index + 1]?.focus();
-    }
+    if (digit && index < OTP_LENGTH - 1) inputRefs.current[index + 1]?.focus();
   };
 
   const handleKeyPress = (e: any, index: number) => {
     if (e.nativeEvent.key === 'Backspace') {
       if (otp[index]) {
-        // clear current
         const newOtp = [...otp];
         newOtp[index] = '';
         setOtp(newOtp);
       } else if (index > 0) {
-        // move back and clear previous
         const newOtp = [...otp];
         newOtp[index - 1] = '';
         setOtp(newOtp);
@@ -68,9 +71,19 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
     if (otpString.length < OTP_LENGTH) return;
     Keyboard.dismiss();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 900));
+    // Run the (fake) verify delay and the permission check in parallel,
+    // so the permission check adds no extra wait time on top of verify.
+    const [, permissionStatus] = await Promise.all([
+      new Promise(r => setTimeout(r, 900)),
+      check(locationPermission).catch(() => null),
+    ]);
     setLoading(false);
-    navigation.replace('LocationPermission');
+
+    const alreadyGranted =
+      permissionStatus === RESULTS.GRANTED ||
+      permissionStatus === RESULTS.LIMITED;
+
+    navigation.replace(alreadyGranted ? 'HomeTabs' : 'LocationPermission');
   };
 
   const handleResend = () => {
@@ -97,7 +110,6 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="always"
         >
-          {/* Back */}
           <TouchableOpacity
             style={styles.backBtn}
             onPress={() => navigation.goBack()}
@@ -106,21 +118,22 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
             <Icon name="chevronLeft" size={20} stroke={Colors.ink} sw={2} />
           </TouchableOpacity>
 
-          {/* Code sent badge */}
           <View style={styles.sentBadge}>
             <View style={styles.greenDot} />
-            <Text style={styles.sentText}>Code sent to +91 {phone}</Text>
+            <Text style={styles.sentText}>
+              {t.auth.codeSentTo}
+              {phone}
+            </Text>
           </View>
 
-          <Text style={styles.heading}>Enter the code</Text>
+          <Text style={styles.heading}>{t.auth.enterCode}</Text>
           <View style={styles.subRow}>
-            <Text style={styles.subText}>6-digit OTP · </Text>
+            <Text style={styles.subText}>{t.auth.otpSubLabel}</Text>
             <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={styles.changeLink}>Change number</Text>
+              <Text style={styles.changeLink}>{t.auth.changeNumber}</Text>
             </TouchableOpacity>
           </View>
 
-          {/* OTP Boxes — each is its own TextInput */}
           <View style={styles.boxRow}>
             {Array.from({ length: OTP_LENGTH }).map((_, i) => (
               <TextInput
@@ -142,18 +155,17 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
             ))}
           </View>
 
-          {/* Resend */}
           <TouchableOpacity onPress={handleResend} disabled={countdown > 0}>
             <Text style={styles.resend}>
               {countdown > 0 ? (
                 <>
-                  <Text>Resend code in </Text>
+                  {t.auth.resendIn}
                   <Text style={styles.resendStrong}>
                     {mm}:{ss}
                   </Text>
                 </>
               ) : (
-                'Resend code'
+                t.auth.resendCode
               )}
             </Text>
           </TouchableOpacity>
@@ -161,7 +173,7 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
           <View style={{ flex: 1 }} />
 
           <NCButton
-            label="Verify & continue"
+            label={t.auth.verifyContinue}
             iconRight="arrowRight"
             onPress={handleVerify}
             loading={loading}
@@ -171,10 +183,11 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
           />
 
           <Text style={styles.legal}>
-            By continuing you agree to our{' '}
-            <Text style={styles.legalLink}>Terms</Text>
-            {' & '}
-            <Text style={styles.legalLink}>Privacy policy</Text>.
+            {t.auth.legalPrefix}
+            <Text style={styles.legalLink}>{t.auth.terms}</Text>
+            {t.auth.legalMid}
+            <Text style={styles.legalLink}>{t.auth.privacy}</Text>
+            {t.auth.legalSuffix}
           </Text>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -228,12 +241,7 @@ const styles = StyleSheet.create({
   },
   subText: { fontSize: fscale(14), color: Colors.textSecondary },
   changeLink: { fontSize: fscale(14), fontWeight: '600', color: Colors.blue },
-
-  boxRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: vscale(14),
-  },
+  boxRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: vscale(14) },
   box: {
     flex: 1,
     height: fscale(62),
@@ -245,20 +253,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.lime,
   },
-  boxFilled: {
-    backgroundColor: Colors.ink,
-  },
-
+  boxFilled: { backgroundColor: Colors.ink },
   resend: {
     fontSize: fscale(13.5),
     color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: vscale(16),
   },
-  resendStrong: {
-    color: Colors.ink,
-    fontWeight: '700',
-  },
+  resendStrong: { color: Colors.ink, fontWeight: '700' },
   legal: {
     fontSize: fscale(11.5),
     color: Colors.textTertiary,
@@ -266,10 +268,7 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
     lineHeight: fscale(17.8),
   },
-  legalLink: {
-    color: Colors.ink,
-    fontWeight: '600',
-  },
+  legalLink: { color: Colors.ink, fontWeight: '600' },
 });
 
 export default OTPVerifyScreen;
