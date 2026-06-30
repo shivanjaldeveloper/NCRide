@@ -24,8 +24,12 @@ type Props = CompositeScreenProps<
   NativeStackScreenProps<RootStackParamList>
 >;
 
-
-const QUICK_STATS_BASE: { icon: IconName; value: string; key: 'coupons' | 'points' | 'refer'; route: 'Coupons' | 'Rewards' | 'Referrals' }[] = [
+const QUICK_STATS_BASE: {
+  icon: IconName;
+  value: string;
+  key: 'coupons' | 'points' | 'refer';
+  route: 'Coupons' | 'Rewards' | 'Referrals';
+}[] = [
   { icon: 'coupon', value: '3', key: 'coupons', route: 'Coupons' },
   { icon: 'reward', value: '840', key: 'points', route: 'Rewards' },
   { icon: 'refer', value: '₹500', key: 'refer', route: 'Referrals' },
@@ -89,7 +93,10 @@ const WalletScreen = ({ navigation }: Props) => {
   const goTo = (route: 'Coupons' | 'Rewards' | 'Referrals') =>
     navigation.getParent()?.navigate(route as never);
 
-  const QUICK_STATS = QUICK_STATS_BASE.map(s => ({ ...s, label: t.wallet[s.key] }));
+  const QUICK_STATS = QUICK_STATS_BASE.map(s => ({
+    ...s,
+    label: t.wallet[s.key],
+  }));
 
   return (
     <View style={styles.root}>
@@ -111,7 +118,7 @@ const WalletScreen = ({ navigation }: Props) => {
             <View>
               <Text style={styles.balanceLabel}>AVAILABLE BALANCE</Text>
               <Text style={styles.balanceAmount}>
-                ₹ 2,18,40000<Text style={styles.balanceDecimal}>.50</Text>
+                ₹ 2,184<Text style={styles.balanceDecimal}>.50</Text>
               </Text>
             </View>
             <View style={styles.balanceIconWrap}>

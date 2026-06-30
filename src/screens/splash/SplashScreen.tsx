@@ -157,8 +157,8 @@ const SplashScreen = ({ navigation }: Props) => {
         />
       </Animated.View>
       <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
-        <Text style={styles.brandName}>NCRide</Text>
-        <Text style={styles.brandSub}>NOIDA · DELHI NCR RIDES</Text>
+        <Text style={styles.brandName}>Alo Alo</Text>
+        <Text style={styles.brandSub}>MAHARASHTRA · BEED . AURANGABAD</Text>
       </Animated.View>
 
       <Animated.View style={[styles.bottomWrap, { opacity: loaderOpacity }]}>
@@ -183,7 +183,7 @@ const SplashScreen = ({ navigation }: Props) => {
             />
           </Svg>
         </Animated.View>
-        <Text style={styles.region}>INDIA · NCR</Text>
+        <Text style={styles.region}>INDIA · MAHARASHTRA</Text>
       </Animated.View>
     </SafeAreaView>
   );

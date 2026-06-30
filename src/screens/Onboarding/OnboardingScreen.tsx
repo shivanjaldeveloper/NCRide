@@ -9,7 +9,6 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
 import { NCButton } from '../../components/common';
@@ -63,6 +62,7 @@ const OnboardingScreen = ({ navigation }: Props) => {
         <View style={styles.illuWrap}>
           <Illustration />
         </View>
+        {/* paddingTop gives space for top matras in Hindi/Marathi */}
         <Text style={styles.title}>{item.title}</Text>
         <Text style={styles.subtitle}>{item.subtitle}</Text>
       </View>
@@ -105,7 +105,6 @@ const OnboardingScreen = ({ navigation }: Props) => {
             />
           ))}
         </View>
-
         <NCButton
           label={isLast ? t.common.getStarted : t.common.next}
           onPress={handleNext}
@@ -128,13 +127,15 @@ const styles = StyleSheet.create({
     top: vscale(16),
     right: Spacing.screen,
     zIndex: 10,
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 4,
   },
   skipText: {
     fontSize: fscale(14),
     fontWeight: '600',
     color: Colors.textSecondary,
+    // generous lineHeight so Hindi skip text isn't clipped
+    lineHeight: fscale(20),
   },
   slide: {
     flex: 1,
@@ -148,52 +149,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  liveChipText: {
-    position: 'absolute',
-    bottom: fscale(38),
-    fontSize: fscale(9),
-    fontWeight: '600',
-    color: Colors.ink,
-  },
   title: {
-    marginTop: fscale(28),
-    fontSize: fscale(30),
+    // paddingTop gives room for top matras (ि ी ु ू) in Hindi/Marathi
+    paddingTop: fscale(8),
+    marginTop: fscale(20),
+    fontSize: fscale(28),
     fontWeight: '700',
-    letterSpacing: -1,
+    // no negative letterSpacing — it collapses Devanagari glyphs
+    letterSpacing: 0,
     color: Colors.ink,
-    lineHeight: fscale(33),
+    // lineHeight 1.45× gives matras above and descenders below room
+    lineHeight: fscale(40),
     textAlign: 'center',
   },
   subtitle: {
-    marginTop: fscale(12),
+    marginTop: fscale(10),
+    paddingTop: fscale(4),
     fontSize: fscale(15),
     color: Colors.textSecondary,
-    lineHeight: fscale(21.75),
+    // lineHeight 1.6× for Devanagari; English looks fine too
+    lineHeight: fscale(24),
     maxWidth: fscale(300),
     textAlign: 'center',
   },
   bottomBar: {
     paddingHorizontal: Spacing.screen,
-    paddingBottom: vscale(5),
+    paddingBottom: vscale(8),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  dots: {
-    flexDirection: 'row',
-    gap: 6,
-  },
+  dots: { flexDirection: 'row', gap: 6 },
   dot: {
     width: 6,
     height: 6,
     borderRadius: 3,
     backgroundColor: 'rgba(15,17,21,0.18)',
   },
-  dotActive: {
-    width: 24,
-    backgroundColor: Colors.ink,
-  },
-  nextBtn: {
-    paddingHorizontal: fscale(24),
-  },
+  dotActive: { width: 24, backgroundColor: Colors.ink },
+  nextBtn: { paddingHorizontal: fscale(24) },
 });

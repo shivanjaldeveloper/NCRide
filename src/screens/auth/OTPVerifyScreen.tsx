@@ -11,7 +11,6 @@ import {
   ScrollView,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { check, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
 import { NCButton, Icon } from '../../components/common';
@@ -22,11 +21,6 @@ type Props = NativeStackScreenProps<RootStackParamList, 'OTPVerify'>;
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 42;
-
-const locationPermission =
-  Platform.OS === 'android'
-    ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
-    : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
 
 const OTPVerifyScreen = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
@@ -71,19 +65,9 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
     if (otpString.length < OTP_LENGTH) return;
     Keyboard.dismiss();
     setLoading(true);
-    // Run the (fake) verify delay and the permission check in parallel,
-    // so the permission check adds no extra wait time on top of verify.
-    const [, permissionStatus] = await Promise.all([
-      new Promise(r => setTimeout(r, 900)),
-      check(locationPermission).catch(() => null),
-    ]);
+    await new Promise(r => setTimeout(r, 900));
     setLoading(false);
-
-    const alreadyGranted =
-      permissionStatus === RESULTS.GRANTED ||
-      permissionStatus === RESULTS.LIMITED;
-
-    navigation.replace(alreadyGranted ? 'HomeTabs' : 'LocationPermission');
+    navigation.replace('LocationPermission');
   };
 
   const handleResend = () => {
@@ -120,6 +104,7 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
 
           <View style={styles.sentBadge}>
             <View style={styles.greenDot} />
+            {/* paddingTop on sentText so top matras aren't cut */}
             <Text style={styles.sentText}>
               {t.auth.codeSentTo}
               {phone}
@@ -127,6 +112,8 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
           </View>
 
           <Text style={styles.heading}>{t.auth.enterCode}</Text>
+
+          {/* subRow: alignItems flex-start so Devanagari text doesn't clip against baseline */}
           <View style={styles.subRow}>
             <Text style={styles.subText}>{t.auth.otpSubLabel}</Text>
             <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -134,6 +121,7 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
             </TouchableOpacity>
           </View>
 
+          {/* OTP boxes — digits only, no matra issues here */}
           <View style={styles.boxRow}>
             {Array.from({ length: OTP_LENGTH }).map((_, i) => (
               <TextInput
@@ -156,6 +144,7 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
           </View>
 
           <TouchableOpacity onPress={handleResend} disabled={countdown > 0}>
+            {/* paddingTop so Devanagari resend text isn't clipped */}
             <Text style={styles.resend}>
               {countdown > 0 ? (
                 <>
@@ -218,33 +207,63 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xs,
     marginBottom: Spacing.md,
+    // paddingTop keeps matras above the row visible
+    paddingTop: fscale(4),
   },
   greenDot: {
     width: fscale(8),
     height: fscale(8),
     borderRadius: fscale(4),
     backgroundColor: Colors.green,
+    flexShrink: 0,
   },
-  sentText: { fontSize: fscale(12), fontWeight: '700', color: Colors.green },
+  sentText: {
+    fontSize: fscale(12),
+    fontWeight: '700',
+    color: Colors.green,
+    lineHeight: fscale(18),
+  },
   heading: {
-    fontSize: fscale(30),
+    fontSize: fscale(28),
     fontWeight: '800',
-    letterSpacing: -1,
+    letterSpacing: 0,
     color: Colors.ink,
-    lineHeight: fscale(33),
+    // paddingTop + generous lineHeight for Devanagari matras
+    paddingTop: fscale(6),
+    lineHeight: fscale(40),
     marginBottom: Spacing.xs,
   },
   subRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: vscale(32),
+    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: fscale(4),
+    marginBottom: vscale(28),
+    // paddingTop so matras on the first word aren't clipped
+    paddingTop: fscale(4),
   },
-  subText: { fontSize: fscale(14), color: Colors.textSecondary },
-  changeLink: { fontSize: fscale(14), fontWeight: '600', color: Colors.blue },
-  boxRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: vscale(14) },
+  subText: {
+    fontSize: fscale(14),
+    color: Colors.textSecondary,
+    lineHeight: fscale(22),
+  },
+  changeLink: {
+    fontSize: fscale(14),
+    fontWeight: '600',
+    color: Colors.blue,
+    lineHeight: fscale(22),
+  },
+  boxRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: vscale(14),
+    // paddingTop so box tops don't clip on very small screens
+    paddingTop: fscale(2),
+  },
   box: {
     flex: 1,
-    height: fscale(62),
+    // taller box gives digit rendering more room
+    height: fscale(64),
     borderRadius: Radii.lg,
     backgroundColor: Colors.ink,
     borderWidth: 2,
@@ -253,20 +272,29 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.lime,
   },
-  boxFilled: { backgroundColor: Colors.ink },
+  boxFilled: {
+    backgroundColor: Colors.ink,
+  },
   resend: {
     fontSize: fscale(13.5),
     color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: vscale(16),
+    // paddingTop for Devanagari matras on resend text
+    paddingTop: fscale(4),
+    lineHeight: fscale(22),
   },
-  resendStrong: { color: Colors.ink, fontWeight: '700' },
+  resendStrong: {
+    color: Colors.ink,
+    fontWeight: '700',
+  },
   legal: {
     fontSize: fscale(11.5),
     color: Colors.textTertiary,
     textAlign: 'center',
     marginTop: Spacing.md,
-    lineHeight: fscale(17.8),
+    lineHeight: fscale(20),
+    paddingTop: fscale(2),
   },
   legalLink: { color: Colors.ink, fontWeight: '600' },
 });

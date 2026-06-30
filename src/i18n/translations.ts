@@ -1,5 +1,5 @@
 /**
- * NCRide – i18n translations
+ * Alo Alo – i18n translations
  * Supported locales: en | hi | mr
  */
 
@@ -26,29 +26,29 @@ const en = {
     later: 'Later',
     paid: 'Paid',
     addContact: 'Add contact',
-    appVersion: 'NCRide · v 1.0.0 · Made for Noida & Delhi NCR',
+    appVersion: 'Alo Alo · v 1.0.0 · Made for Maharastra & Aurangabad',
   },
   onboarding: {
     slides: [
       {
-        title: 'Rides for every need in NCR.',
+        title: 'Rides for every need in Maharastra.',
         subtitle:
-          'Cars, bikes, autos, e-rickshaws and intercity rides — premium NCR mobility with one tap.',
+          'Cars, bikes, autos, e-rickshaws and intercity rides — premium Maharastra mobility with one tap.',
       },
       {
         title: 'Auto, E-Rickshaw & intercity — all in one.',
         subtitle:
-          'Book an auto for quick errands, an e-rickshaw for short hops, or a premium car for longer trips. NCRide has it all.',
+          'Book an auto for quick errands, an e-rickshaw for short hops, or a premium car for longer trips. Alo Alo has it all.',
       },
       {
         title: 'Live tracking. SOS. Ride safely.',
         subtitle:
-          'Track your ride live, share with family, and tap SOS anytime. NCRide keeps every journey safe.',
+          'Track your ride live, share with family, and tap SOS anytime. Alo Alo keeps every journey safe.',
       },
     ],
   },
   auth: {
-    welcome: 'Welcome.\nSign in to NCRide',
+    welcome: 'Welcome.\nSign in to Alo Alo',
     welcomeSub: "We'll send a 6-digit OTP to verify your number.",
     mobileNumber: 'MOBILE NUMBER',
     phonePlaceholder: '98300 12428',
@@ -69,7 +69,7 @@ const en = {
   },
   permission: {
     heading: 'Allow precise location',
-    body: 'NCRide uses your location to find the closest driver, accurate pickup, and live trip tracking. You can change this in Settings.',
+    body: 'Alo Alo uses your location to find the closest driver, accurate pickup, and live trip tracking. You can change this in Settings.',
     features: [
       { title: 'Precise pickup', sub: 'Saves you time on every ride' },
       { title: 'Live trip tracking', sub: 'Share with friends & family' },
@@ -88,12 +88,12 @@ const en = {
     services: 'SERVICES',
     recentRides: 'RECENT RIDES',
     quickActions: 'QUICK ACTIONS',
-    walletLabel: 'NCRIDE WALLET',
+    walletLabel: 'Alo Alo WALLET',
     addMoney: '+ Add money',
     suggestedRoute: 'Suggested route',
     book: 'Book →',
     limitedOffer: 'LIMITED OFFER',
-    promoTitle: '50% off your\nfirst NCRide',
+    promoTitle: '50% off your\nfirst Alo Alo',
     promoCode: 'Use FIRSTRIDE →',
     serviceItems: [
       { label: 'Auto', sub: 'Quick & nimble' },
@@ -114,7 +114,7 @@ const en = {
   },
   activity: {
     title: 'Activity',
-    sub: 'All your rides in NCR',
+    sub: 'All your rides in Maharastra',
     upcoming: 'Upcoming · 2',
     past: 'Past · 5',
   },
@@ -156,10 +156,10 @@ const en = {
     holdBtn: 'HOLD 3 SECONDS TO ALERT',
     emergencyContacts: 'EMERGENCY CONTACTS',
     helpSupport: 'HELP & SUPPORT',
-    chatSupport: 'Chat with NCRide support',
+    chatSupport: 'Chat with Alo Alo support',
     chatSupportSub: 'Avg reply 28 sec · 24×7',
     callHelpline: 'Call helpline',
-    callHelplineSub: '1800 200 NCR-IDE (62743)',
+    callHelplineSub: '1800 200 ALO-IDE (62743)',
     reportIssue: 'Report an issue',
     reportIssueSub: 'Driver behaviour, lost item, fare dispute',
     trustSafety: 'Trust & Safety policies',
@@ -187,29 +187,29 @@ const hi: TranslationKeys = {
     later: 'बाद में',
     paid: 'भुगतान',
     addContact: 'संपर्क जोड़ें',
-    appVersion: 'NCRide · v 1.0.0 · नोएडा और दिल्ली NCR के लिए',
+    appVersion: 'Alo Alo · v 1.0.0 · नोएडा और दिल्ली Maharastra के लिए',
   },
   onboarding: {
     slides: [
       {
-        title: 'NCR में हर ज़रूरत के लिए राइड।',
+        title: 'Maharastra में हर ज़रूरत के लिए राइड।',
         subtitle:
-          'कार, बाइक, ऑटो, ई-रिक्शा और इंटरसिटी राइड — एक टैप में प्रीमियम NCR मोबिलिटी।',
+          'कार, बाइक, ऑटो, ई-रिक्शा और इंटरसिटी राइड — एक टैप में प्रीमियम Maharastra मोबिलिटी।',
       },
       {
         title: 'ऑटो, ई-रिक्शा और इंटरसिटी — सब एक जगह।',
         subtitle:
-          'छोटे काम के लिए ऑटो, छोटी दूरी के लिए ई-रिक्शा, या लंबे सफर के लिए प्रीमियम कार। NCRide में सब कुछ है।',
+          'छोटे काम के लिए ऑटो, छोटी दूरी के लिए ई-रिक्शा, या लंबे सफर के लिए प्रीमियम कार। Alo Alo में सब कुछ है।',
       },
       {
         title: 'लाइव ट्रैकिंग। SOS। सुरक्षित यात्रा।',
         subtitle:
-          'अपनी राइड को लाइव ट्रैक करें, परिवार के साथ शेयर करें, और कभी भी SOS दबाएं। NCRide हर यात्रा को सुरक्षित बनाता है।',
+          'अपनी राइड को लाइव ट्रैक करें, परिवार के साथ शेयर करें, और कभी भी SOS दबाएं। Alo Alo हर यात्रा को सुरक्षित बनाता है।',
       },
     ],
   },
   auth: {
-    welcome: 'स्वागत है।\nNCRide में साइन इन करें',
+    welcome: 'स्वागत है।\nAlo Alo में साइन इन करें',
     welcomeSub: 'हम आपके नंबर को सत्यापित करने के लिए 6-अंकीय OTP भेजेंगे।',
     mobileNumber: 'मोबाइल नंबर',
     phonePlaceholder: '98300 12428',
@@ -231,7 +231,7 @@ const hi: TranslationKeys = {
   },
   permission: {
     heading: 'सटीक स्थान की अनुमति दें',
-    body: 'NCRide आपका स्थान नज़दीकी ड्राइवर खोजने, सटीक पिकअप और लाइव ट्रिप ट्रैकिंग के लिए उपयोग करता है। आप इसे सेटिंग्स में बदल सकते हैं।',
+    body: 'Alo Alo आपका स्थान नज़दीकी ड्राइवर खोजने, सटीक पिकअप और लाइव ट्रिप ट्रैकिंग के लिए उपयोग करता है। आप इसे सेटिंग्स में बदल सकते हैं।',
     features: [
       { title: 'सटीक पिकअप', sub: 'हर राइड में आपका समय बचाता है' },
       {
@@ -253,12 +253,12 @@ const hi: TranslationKeys = {
     services: 'सेवाएं',
     recentRides: 'हाल की राइड',
     quickActions: 'त्वरित कार्य',
-    walletLabel: 'NCRide वॉलेट',
+    walletLabel: 'Alo Alo वॉलेट',
     addMoney: '+ पैसे जोड़ें',
     suggestedRoute: 'सुझाया गया रास्ता',
     book: 'बुक करें →',
     limitedOffer: 'सीमित ऑफर',
-    promoTitle: 'पहली NCRide पर\n50% छूट',
+    promoTitle: 'पहली Alo Alo पर\n50% छूट',
     promoCode: 'FIRSTRIDE उपयोग करें →',
     serviceItems: [
       { label: 'ऑटो', sub: 'तेज़ और चुस्त' },
@@ -279,7 +279,7 @@ const hi: TranslationKeys = {
   },
   activity: {
     title: 'गतिविधि',
-    sub: 'NCR में आपकी सभी राइड',
+    sub: 'Maharastra में आपकी सभी राइड',
     upcoming: 'आगामी · 2',
     past: 'पिछली · 5',
   },
@@ -321,10 +321,10 @@ const hi: TranslationKeys = {
     holdBtn: 'अलर्ट के लिए 3 सेकंड होल्ड करें',
     emergencyContacts: 'आपातकालीन संपर्क',
     helpSupport: 'सहायता और समर्थन',
-    chatSupport: 'NCRide सपोर्ट से चैट करें',
+    chatSupport: 'Alo Alo सपोर्ट से चैट करें',
     chatSupportSub: 'औसत जवाब 28 सेकंड · 24×7',
     callHelpline: 'हेल्पलाइन कॉल करें',
-    callHelplineSub: '1800 200 NCR-IDE (62743)',
+    callHelplineSub: '1800 200 ALO-IDE (62743)',
     reportIssue: 'समस्या रिपोर्ट करें',
     reportIssueSub: 'ड्राइवर व्यवहार, खोई वस्तु, किराया विवाद',
     trustSafety: 'विश्वास और सुरक्षा नीतियां',
@@ -352,29 +352,29 @@ const mr: TranslationKeys = {
     later: 'नंतर',
     paid: 'दिले',
     addContact: 'संपर्क जोडा',
-    appVersion: 'NCRide · v 1.0.0 · नोएडा आणि दिल्ली NCR साठी',
+    appVersion: 'Alo Alo · v 1.0.0 · नोएडा आणि दिल्ली Maharastra साठी',
   },
   onboarding: {
     slides: [
       {
-        title: 'NCR मध्ये प्रत्येक गरजेसाठी राइड।',
+        title: 'Maharastra मध्ये प्रत्येक गरजेसाठी राइड।',
         subtitle:
-          'कार, बाइक, ऑटो, ई-रिक्षा आणि इंटरसिटी राइड — एका टॅपमध्ये प्रीमियम NCR मोबिलिटी।',
+          'कार, बाइक, ऑटो, ई-रिक्षा आणि इंटरसिटी राइड — एका टॅपमध्ये प्रीमियम Maharastra मोबिलिटी।',
       },
       {
         title: 'ऑटो, ई-रिक्षा आणि इंटरसिटी — एकाच ठिकाणी।',
         subtitle:
-          'छोट्या कामांसाठी ऑटो, छोट्या अंतरासाठी ई-रिक्षा, किंवा लांब प्रवासासाठी प्रीमियम कार. NCRide कडे सर्व काही आहे.',
+          'छोट्या कामांसाठी ऑटो, छोट्या अंतरासाठी ई-रिक्षा, किंवा लांब प्रवासासाठी प्रीमियम कार. Alo Alo कडे सर्व काही आहे.',
       },
       {
         title: 'थेट ट्रॅकिंग. SOS. सुरक्षित प्रवास.',
         subtitle:
-          'तुमची राइड थेट ट्रॅक करा, कुटुंबासोबत शेअर करा, आणि कधीही SOS दाबा. NCRide प्रत्येक प्रवास सुरक्षित ठेवतो.',
+          'तुमची राइड थेट ट्रॅक करा, कुटुंबासोबत शेअर करा, आणि कधीही SOS दाबा. Alo Alo प्रत्येक प्रवास सुरक्षित ठेवतो.',
       },
     ],
   },
   auth: {
-    welcome: 'स्वागत आहे।\nNCRide मध्ये साइन इन करा',
+    welcome: 'स्वागत आहे।\nAlo Alo मध्ये साइन इन करा',
     welcomeSub: 'आम्ही तुमचा नंबर पडताळण्यासाठी 6-अंकी OTP पाठवू.',
     mobileNumber: 'मोबाइल नंबर',
     phonePlaceholder: '98300 12428',
@@ -396,7 +396,7 @@ const mr: TranslationKeys = {
   },
   permission: {
     heading: 'अचूक स्थान परवानगी द्या',
-    body: 'NCRide सर्वात जवळचा ड्रायव्हर शोधण्यासाठी, अचूक पिकअप आणि थेट ट्रिप ट्रॅकिंगसाठी तुमचे स्थान वापरतो. तुम्ही हे सेटिंग्जमध्ये बदलू शकता.',
+    body: 'Alo Alo सर्वात जवळचा ड्रायव्हर शोधण्यासाठी, अचूक पिकअप आणि थेट ट्रिप ट्रॅकिंगसाठी तुमचे स्थान वापरतो. तुम्ही हे सेटिंग्जमध्ये बदलू शकता.',
     features: [
       { title: 'अचूक पिकअप', sub: 'प्रत्येक राइडमध्ये वेळ वाचवतो' },
       { title: 'थेट ट्रिप ट्रॅकिंग', sub: 'मित्र आणि कुटुंबासोबत शेअर करा' },
@@ -412,12 +412,12 @@ const mr: TranslationKeys = {
     services: 'सेवा',
     recentRides: 'अलीकडील राइड',
     quickActions: 'द्रुत कार्ये',
-    walletLabel: 'NCRide वॉलेट',
+    walletLabel: 'Alo Alo वॉलेट',
     addMoney: '+ पैसे जोडा',
     suggestedRoute: 'सुचवलेला मार्ग',
     book: 'बुक करा →',
     limitedOffer: 'मर्यादित ऑफर',
-    promoTitle: 'पहिल्या NCRide वर\n50% सूट',
+    promoTitle: 'पहिल्या Alo Alo वर\n50% सूट',
     promoCode: 'FIRSTRIDE वापरा →',
     serviceItems: [
       { label: 'ऑटो', sub: 'जलद आणि चपळ' },
@@ -438,7 +438,7 @@ const mr: TranslationKeys = {
   },
   activity: {
     title: 'क्रियाकलाप',
-    sub: 'NCR मधील तुमच्या सर्व राइड',
+    sub: 'Maharastra मधील तुमच्या सर्व राइड',
     upcoming: 'येणारे · 2',
     past: 'मागील · 5',
   },
@@ -480,10 +480,10 @@ const mr: TranslationKeys = {
     holdBtn: 'अलर्ट साठी 3 सेकंद धरा',
     emergencyContacts: 'आपत्कालीन संपर्क',
     helpSupport: 'मदत आणि आधार',
-    chatSupport: 'NCRide सपोर्टशी चॅट करा',
+    chatSupport: 'Alo Alo सपोर्टशी चॅट करा',
     chatSupportSub: 'सरासरी उत्तर 28 सेकंद · 24×7',
     callHelpline: 'हेल्पलाइन कॉल करा',
-    callHelplineSub: '1800 200 NCR-IDE (62743)',
+    callHelplineSub: '1800 200 ALO-IDE (62743)',
     reportIssue: 'समस्या नोंदवा',
     reportIssueSub: 'ड्रायव्हर वर्तन, हरवलेली वस्तू, भाडे वाद',
     trustSafety: 'विश्वास आणि सुरक्षा धोरणे',

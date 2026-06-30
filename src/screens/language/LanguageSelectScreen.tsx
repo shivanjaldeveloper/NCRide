@@ -72,8 +72,6 @@ const LanguageSelectScreen = ({ navigation }: Props) => {
               onPress={() => setSelected(opt.locale)}
               activeOpacity={0.75}
             >
-              <Text style={styles.flag}>{opt.flag}</Text>
-
               <View style={styles.optionText}>
                 <Text
                   style={[styles.nativeLabel, isActive && styles.textActive]}

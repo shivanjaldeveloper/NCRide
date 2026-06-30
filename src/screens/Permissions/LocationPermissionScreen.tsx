@@ -54,7 +54,7 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
       const result = await request(permission);
       if (result === RESULTS.BLOCKED) openSettings();
       goHome();
-    } catch (e) {
+    } catch {
       goHome();
     } finally {
       setRequesting(false);
@@ -78,7 +78,7 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
     >
       <View style={styles.container}>
         <View style={styles.mapWrap}>
-          <MapView height={fscale(320)} showRoute={false} showControls={false}>
+          <MapView height={fscale(300)} showRoute={false} showControls={false}>
             <View style={styles.centerDotWrap}>
               <Animated.View
                 style={[
@@ -92,16 +92,18 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
         </View>
 
         <View style={styles.textBlock}>
+          {/* paddingTop lets matras on the heading render without clipping */}
           <Text style={styles.heading}>{t.permission.heading}</Text>
           <Text style={styles.body}>{t.permission.body}</Text>
 
           <View style={styles.featureList}>
             {t.permission.features.map((f, i) => (
               <View key={i} style={styles.featureRow}>
-                <View style={styles.featureIcon}>
+                {/* flex-start so icon stays at top when text wraps in Hindi/Marathi */}
+                <View style={styles.featureIconWrap}>
                   <Icon name={FEATURE_ICONS[i]} size={18} stroke={Colors.ink} />
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={styles.featureTextWrap}>
                   <Text style={styles.featureTitle}>{f.title}</Text>
                   <Text style={styles.featureSub}>{f.sub}</Text>
                 </View>
@@ -118,7 +120,7 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
           loading={requesting}
           variant="primary"
           size="lg"
-          style={{ marginBottom: Spacing.sm }}
+          style={styles.allowBtn}
         />
         <NCButton
           label={t.permission.laterBtn}
@@ -135,10 +137,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: Spacing.screen,
-    paddingTop: vscale(16),
-    paddingBottom: vscale(40),
+    paddingTop: vscale(12),
+    paddingBottom: vscale(36),
   },
-  mapWrap: { borderRadius: Radii.xl, overflow: 'hidden' },
+  mapWrap: {
+    borderRadius: Radii.xl,
+    overflow: 'hidden',
+  },
   centerDotWrap: {
     position: 'absolute',
     top: '50%',
@@ -163,36 +168,68 @@ const styles = StyleSheet.create({
     borderWidth: 5,
     borderColor: '#fff',
   },
-  textBlock: { marginTop: vscale(28) },
+  textBlock: {
+    marginTop: vscale(22),
+  },
   heading: {
-    fontSize: fscale(28),
+    fontSize: fscale(26),
     fontWeight: '700',
-    letterSpacing: -0.8,
+    letterSpacing: 0,
     color: Colors.ink,
-    lineHeight: fscale(32.2),
+    // paddingTop so top matras (ि ्) aren't clipped
+    paddingTop: fscale(6),
+    // 1.45× lineHeight for Devanagari
+    lineHeight: fscale(38),
   },
   body: {
-    marginTop: Spacing.md,
-    fontSize: fscale(14.5),
+    marginTop: Spacing.sm,
+    fontSize: fscale(14),
     color: Colors.textSecondary,
-    lineHeight: fscale(21),
+    // 1.6× lineHeight for multi-line Devanagari
+    lineHeight: fscale(22),
+    paddingTop: fscale(4),
   },
-  featureList: { marginTop: vscale(18), gap: vscale(10) },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  featureIcon: {
+  featureList: {
+    marginTop: vscale(14),
+    gap: vscale(10),
+  },
+  featureRow: {
+    flexDirection: 'row',
+    // flex-start: icon stays at top, text wraps freely below
+    alignItems: 'flex-start',
+    gap: Spacing.md,
+  },
+  featureIconWrap: {
     width: fscale(36),
     height: fscale(36),
     borderRadius: Radii.md,
     backgroundColor: Colors.borderSoft,
     alignItems: 'center',
     justifyContent: 'center',
+    // keeps icon vertically centred relative to first text line
+    marginTop: fscale(2),
+    flexShrink: 0,
+  },
+  featureTextWrap: {
+    flex: 1,
+    // paddingTop so top matras on feature titles aren't cut
+    paddingTop: fscale(2),
   },
   featureTitle: {
     fontSize: fscale(13.5),
     fontWeight: '600',
     color: Colors.ink,
+    lineHeight: fscale(20),
   },
-  featureSub: { fontSize: fscale(12), color: Colors.textSecondary },
+  featureSub: {
+    fontSize: fscale(12),
+    color: Colors.textSecondary,
+    lineHeight: fscale(18),
+    marginTop: fscale(2),
+  },
+  allowBtn: {
+    marginBottom: Spacing.sm,
+  },
 });
 
 export default LocationPermissionScreen;
