@@ -1,20 +1,14 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  Platform,
   ViewStyle,
 } from 'react-native';
-import Svg, {
-  Rect,
-  Path,
-  Line,
-  Circle,
-  Defs,
-  LinearGradient,
-  Stop,
-} from 'react-native-svg';
+import RNMapView, { PROVIDER_GOOGLE } from 'react-native-maps';
+import { check, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import { Colors, Radii } from '../../theme';
 import Icon from '../common/Icon';
 
@@ -25,32 +19,37 @@ interface Props {
   pickup?: string;
   drop?: string;
   /**
-   * Vehicle + route animation. Not implemented yet in this RN port — the
-   * reference's animated polyline/vehicle marker needs Reanimated to do
-   * smoothly and is out of scope for this phase. Passing `true` here is a
-   * no-op for now; the static route/pins still render.
+   * Kept for API compatibility with existing call sites. Real-map version
+   * has no SVG vehicle marker to animate, so this is a no-op here too.
    */
   animateVehicle?: boolean;
-  /**
-   * Optional style override/extension, merged after the component's own
-   * `wrap` style. Lets full-screen usages (Ride/Driver/Tracking) square off
-   * the corners or position the map absolutely, without affecting any
-   * existing call site that doesn't pass it.
-   */
   style?: ViewStyle;
   children?: React.ReactNode;
 }
 
+const DEFAULT_REGION = {
+  latitude: 28.6139,
+  longitude: 77.209,
+  latitudeDelta: 0.05,
+  longitudeDelta: 0.05,
+};
+
+const getLocationPermissionType = () =>
+  Platform.OS === 'android'
+    ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
+    : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
+
 /**
  * MapView
- * RN port of the design reference's procedural illustrated map (roads,
- * parks, water, dotted texture) — not a real map SDK. Used wherever the
- * mock shows a stylised map background (location permission, ride
- * tracking, location picker, etc).
+ * Real react-native-maps instance showing the user's live location.
+ * Same props API as the previous illustrated-SVG version so every existing
+ * call site (location permission, ride tracking, location picker, Home)
+ * keeps working unchanged.
  *
- * Phase 1 ships the static look (land/roads/route/pins + floating
- * zoom/locate controls). Animated vehicle-on-route motion is planned for
- * the ride-tracking phase.
+ * Note: `showRoute` no longer draws a fabricated polyline between pickup
+ * and drop, since those are just display strings without real lat/lng -
+ * a route line on a real map needs real coordinates. The pickup/drop
+ * label chips still render as before.
  */
 const MapView = ({
   height = 280,
@@ -61,210 +60,128 @@ const MapView = ({
   style,
   children,
 }: Props) => {
-  // Static sample point along the reference's route curve, used for the
-  // (currently non-animated) vehicle marker.
-  const routeD = 'M 60 350 C 140 320, 200 260, 220 200 S 320 130, 380 100';
+  const mapRef = useRef<RNMapView>(null);
+  const [locationGranted, setLocationGranted] = useState(false);
+  const [checked, setChecked] = useState(false);
+  // tracks current zoom so the + / - controls can step it without
+  // needing a live region-change listener
+  const zoomDeltaRef = useRef({
+    latitudeDelta: DEFAULT_REGION.latitudeDelta,
+    longitudeDelta: DEFAULT_REGION.longitudeDelta,
+  });
+  const lastKnownCoordRef = useRef<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+  const hasCenteredOnLiveFix = useRef(false);
+
+  useEffect(() => {
+    // read-only check, never prompts - by the time a screen renders this
+    // component, permission should already have been requested via the
+    // LocationPermission screen earlier in the flow
+    check(getLocationPermissionType())
+      .then(result => setLocationGranted(result === RESULTS.GRANTED))
+      .catch(() => setLocationGranted(false))
+      .finally(() => setChecked(true));
+  }, []);
+
+  const onUserLocationChange = (event: any) => {
+    const { coordinate } = event.nativeEvent;
+    if (!coordinate) return;
+    lastKnownCoordRef.current = coordinate;
+    if (hasCenteredOnLiveFix.current) return;
+    hasCenteredOnLiveFix.current = true;
+    mapRef.current?.animateToRegion(
+      {
+        latitude: coordinate.latitude,
+        longitude: coordinate.longitude,
+        latitudeDelta: zoomDeltaRef.current.latitudeDelta,
+        longitudeDelta: zoomDeltaRef.current.longitudeDelta,
+      },
+      800,
+    );
+  };
+
+  const zoomBy = (factor: number) => {
+    const center = lastKnownCoordRef.current ?? DEFAULT_REGION;
+    const nextLatDelta = Math.max(
+      0.001,
+      zoomDeltaRef.current.latitudeDelta * factor,
+    );
+    const nextLngDelta = Math.max(
+      0.001,
+      zoomDeltaRef.current.longitudeDelta * factor,
+    );
+    zoomDeltaRef.current = {
+      latitudeDelta: nextLatDelta,
+      longitudeDelta: nextLngDelta,
+    };
+    mapRef.current?.animateToRegion(
+      {
+        latitude: center.latitude,
+        longitude: center.longitude,
+        latitudeDelta: nextLatDelta,
+        longitudeDelta: nextLngDelta,
+      },
+      300,
+    );
+  };
+
+  const recenter = () => {
+    const center = lastKnownCoordRef.current;
+    if (!center) return;
+    mapRef.current?.animateToRegion(
+      {
+        latitude: center.latitude,
+        longitude: center.longitude,
+        latitudeDelta: zoomDeltaRef.current.latitudeDelta,
+        longitudeDelta: zoomDeltaRef.current.longitudeDelta,
+      },
+      500,
+    );
+  };
 
   return (
-    <View style={[styles.wrap, height ? { height } : null, , style]}>
-      <Svg
-        viewBox="0 0 440 440"
-        width="100%"
-        height="100%"
-        style={StyleSheet.absoluteFill}
-      >
-        <Defs>
-          <LinearGradient id="routeg" x1="0" y1="0" x2="1" y2="0">
-            <Stop offset="0" stopColor={Colors.blue} />
-            <Stop offset="1" stopColor={Colors.cyan} />
-          </LinearGradient>
-        </Defs>
-
-        {/* land base */}
-        <Rect width="440" height="440" fill={Colors.map} />
-
-        {/* parks/green */}
-        <Path
-          d="M -20 80 Q 80 60 160 110 Q 220 160 180 220 Q 100 240 20 200 Z"
-          fill={Colors.mapGreen}
+    <View style={[styles.wrap, height ? { height } : null, style]}>
+      {checked && locationGranted ? (
+        <RNMapView
+          ref={mapRef}
+          provider={PROVIDER_GOOGLE}
+          style={StyleSheet.absoluteFill}
+          initialRegion={DEFAULT_REGION}
+          showsUserLocation
+          showsMyLocationButton={false}
+          followsUserLocation={false}
+          onUserLocationChange={onUserLocationChange}
         />
-        <Path
-          d="M 280 280 Q 380 260 460 300 L 460 380 L 280 380 Z"
-          fill={Colors.mapGreen}
-        />
-
-        {/* water */}
-        <Path
-          d="M -20 380 Q 100 360 220 400 Q 340 440 460 410 L 460 460 L -20 460 Z"
-          fill={Colors.mapWater}
-        />
-        <Path
-          d="M 380 -20 Q 410 60 460 80 L 460 -20 Z"
-          fill={Colors.mapWater}
-        />
-
-        {/* minor road grid */}
-        <Line
-          x1="0"
-          y1="60"
-          x2="440"
-          y2="80"
-          stroke={Colors.mapRoadMinor}
-          strokeWidth={6}
-          strokeLinecap="round"
-        />
-        <Line
-          x1="0"
-          y1="160"
-          x2="440"
-          y2="170"
-          stroke={Colors.mapRoadMinor}
-          strokeWidth={6}
-          strokeLinecap="round"
-        />
-        <Line
-          x1="0"
-          y1="260"
-          x2="440"
-          y2="280"
-          stroke={Colors.mapRoadMinor}
-          strokeWidth={6}
-          strokeLinecap="round"
-        />
-        <Line
-          x1="0"
-          y1="350"
-          x2="440"
-          y2="370"
-          stroke={Colors.mapRoadMinor}
-          strokeWidth={6}
-          strokeLinecap="round"
-        />
-        <Line
-          x1="80"
-          y1="0"
-          x2="100"
-          y2="440"
-          stroke={Colors.mapRoadMinor}
-          strokeWidth={6}
-          strokeLinecap="round"
-        />
-        <Line
-          x1="200"
-          y1="0"
-          x2="220"
-          y2="440"
-          stroke={Colors.mapRoadMinor}
-          strokeWidth={6}
-          strokeLinecap="round"
-        />
-        <Line
-          x1="320"
-          y1="0"
-          x2="340"
-          y2="440"
-          stroke={Colors.mapRoadMinor}
-          strokeWidth={6}
-          strokeLinecap="round"
-        />
-
-        {/* major roads */}
-        <Path
-          d="M -10 220 C 100 200, 200 230, 320 200 S 430 180, 460 200"
-          fill="none"
-          stroke={Colors.mapRoad}
-          strokeWidth={14}
-          strokeLinecap="round"
-        />
-        <Path
-          d="M 130 -10 C 150 100, 120 200, 180 320 S 230 430, 220 470"
-          fill="none"
-          stroke={Colors.mapRoad}
-          strokeWidth={14}
-          strokeLinecap="round"
-        />
-        <Path
-          d="M 0 110 Q 200 90 440 130"
-          fill="none"
-          stroke="#EFE9DC"
-          strokeWidth={10}
-          strokeLinecap="round"
-          opacity={0.9}
-        />
-        <Path
-          d="M 0 300 Q 220 320 440 290"
-          fill="none"
-          stroke="#EFE9DC"
-          strokeWidth={10}
-          strokeLinecap="round"
-          opacity={0.9}
-        />
-        <Path
-          d="M 280 0 Q 320 200 360 440"
-          fill="none"
-          stroke="#EFE9DC"
-          strokeWidth={10}
-          strokeLinecap="round"
-          opacity={0.9}
-        />
-
-        {/* route */}
-        {showRoute && (
-          <>
-            <Path
-              d={routeD}
-              stroke="rgba(46,125,255,0.25)"
-              strokeWidth={10}
-              fill="none"
-              strokeLinecap="round"
-            />
-            <Path
-              d={routeD}
-              stroke="url(#routeg)"
-              strokeWidth={5}
-              fill="none"
-              strokeLinecap="round"
-            />
-          </>
-        )}
-
-        {/* pickup pin */}
-        {showRoute && (
-          <>
-            <Circle
-              cx={60}
-              cy={350}
-              r={10}
-              fill="#fff"
-              stroke={Colors.green}
-              strokeWidth={3}
-            />
-            <Circle cx={60} cy={350} r={3.5} fill={Colors.green} />
-          </>
-        )}
-
-        {/* drop pin */}
-        {showRoute && (
-          <Path
-            d="M380,78 C390,78 394,86 394,94 C394,104 386,112 380,122 C374,112 366,104 366,94 C366,86 370,78 380,78 Z"
-            fill={Colors.ink}
-          />
-        )}
-        {showRoute && <Circle cx={380} cy={94} r={5} fill="#fff" />}
-      </Svg>
+      ) : (
+        <View style={[StyleSheet.absoluteFill, styles.fallback]} />
+      )}
 
       {/* floating zoom/locate controls */}
       {showControls && (
         <View style={styles.controls}>
-          {(['plus', 'minus', 'locate'] as const).map(n => (
-            <TouchableOpacity
-              key={n}
-              style={styles.controlBtn}
-              activeOpacity={0.8}
-            >
-              <Icon name={n} size={18} stroke={Colors.ink} sw={1.8} />
-            </TouchableOpacity>
-          ))}
+          <TouchableOpacity
+            style={styles.controlBtn}
+            activeOpacity={0.8}
+            onPress={() => zoomBy(0.5)}
+          >
+            <Icon name="plus" size={18} stroke={Colors.ink} sw={1.8} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.controlBtn}
+            activeOpacity={0.8}
+            onPress={() => zoomBy(2)}
+          >
+            <Icon name="minus" size={18} stroke={Colors.ink} sw={1.8} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.controlBtn}
+            activeOpacity={0.8}
+            onPress={recenter}
+          >
+            <Icon name="locate" size={18} stroke={Colors.ink} sw={1.8} />
+          </TouchableOpacity>
         </View>
       )}
 
@@ -304,6 +221,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: Colors.map,
     position: 'relative',
+  },
+  fallback: {
+    backgroundColor: Colors.map,
   },
   controls: {
     position: 'absolute',

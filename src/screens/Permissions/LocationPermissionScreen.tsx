@@ -15,6 +15,7 @@ import {
   RESULTS,
   openSettings,
 } from 'react-native-permissions';
+import NetInfo from '@react-native-community/netinfo';
 import RNMapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
@@ -34,13 +35,25 @@ const DEFAULT_REGION = {
   longitudeDelta: 0.05,
 };
 
+// how long we'll wait for a real GPS fix before giving up and moving on
+// anyway, so the user is never stuck on this screen if GPS is slow/stuck
+const LOCATE_TIMEOUT_MS = 15000;
+// how long the user gets to actually see the map centered on them
+// before we auto-advance to HomeTabs
+const POST_CENTER_DELAY_MS = 1400;
+
 const LocationPermissionScreen = ({ navigation }: Props) => {
   const { t } = useTranslation();
   const [requesting, setRequesting] = useState(false);
   const [mapLoading, setMapLoading] = useState(true);
   const [locationGranted, setLocationGranted] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
+  const [advancing, setAdvancing] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
   const mapRef = useRef<RNMapView>(null);
+  const hasCenteredOnLiveFix = useRef(false);
+  const locateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const navigatedRef = useRef(false);
 
   useEffect(() => {
     Animated.loop(
@@ -55,18 +68,28 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
 
   useEffect(() => {
     checkInitialLocation();
+
+    const unsubscribe = NetInfo.addEventListener(state => {
+      setIsConnected(
+        state.isConnected !== false && state.isInternetReachable !== false,
+      );
+    });
+
+    return () => {
+      unsubscribe();
+      if (locateTimeoutRef.current) clearTimeout(locateTimeoutRef.current);
+    };
   }, []);
 
-  // silent check on mount so the real map can render immediately if
-  // permission was already granted in a previous session
+  const getPermissionType = () =>
+    Platform.OS === 'android'
+      ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
+      : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
+
   const checkInitialLocation = async () => {
     try {
       setMapLoading(true);
-      const permission =
-        Platform.OS === 'android'
-          ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
-          : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
-      const result = await request(permission);
+      const result = await request(getPermissionType());
       setLocationGranted(result === RESULTS.GRANTED);
     } catch {
       setLocationGranted(false);
@@ -75,19 +98,41 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
     }
   };
 
-  const goHome = () => navigation.replace('HomeTabs');
+  // single source of truth for leaving this screen, so we never
+  // double-navigate from both the timeout and the live-fix paths
+  const goHome = () => {
+    if (navigatedRef.current) return;
+    navigatedRef.current = true;
+    if (locateTimeoutRef.current) clearTimeout(locateTimeoutRef.current);
+    navigation.replace('HomeTabs');
+  };
 
   const requestPermission = async () => {
     try {
       setRequesting(true);
-      const permission =
-        Platform.OS === 'android'
-          ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
-          : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
-      const result = await request(permission);
+
+      const netState = await NetInfo.fetch();
+      const connected =
+        netState.isConnected !== false &&
+        netState.isInternetReachable !== false;
+      setIsConnected(connected);
+      if (!connected) {
+        // don't even attempt permission/map without network - the map
+        // tiles and the location fix both need connectivity
+        setRequesting(false);
+        return;
+      }
+
+      const result = await request(getPermissionType());
       if (result === RESULTS.GRANTED) {
         setLocationGranted(true);
-        goHome();
+        setAdvancing(true);
+        // safety net: if GPS never resolves, don't trap the user here
+        locateTimeoutRef.current = setTimeout(() => {
+          goHome();
+        }, LOCATE_TIMEOUT_MS);
+        // intentionally NOT calling goHome() here - we wait for
+        // onUserLocationChange to actually center the map first
       } else if (result === RESULTS.BLOCKED) {
         openSettings();
       }
@@ -99,8 +144,10 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
   };
 
   const onUserLocationChange = (event: any) => {
+    if (hasCenteredOnLiveFix.current) return;
     const { coordinate } = event.nativeEvent;
     if (coordinate && mapRef.current) {
+      hasCenteredOnLiveFix.current = true;
       mapRef.current.animateToRegion(
         {
           latitude: coordinate.latitude,
@@ -110,6 +157,11 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
         },
         1000,
       );
+      if (advancing) {
+        setTimeout(() => {
+          goHome();
+        }, POST_CENTER_DELAY_MS);
+      }
     }
   };
 
@@ -161,17 +213,33 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
               </View>
             </View>
           )}
+
+          {advancing && (
+            <View style={styles.locatingOverlay}>
+              <ActivityIndicator size="small" color={Colors.blue} />
+              <Text style={styles.locatingText}>
+                {t.permission.locating ?? 'Locating you…'}
+              </Text>
+            </View>
+          )}
         </View>
 
+        {!isConnected && (
+          <View style={styles.networkBanner}>
+            <Text style={styles.networkBannerText}>
+              {t.permission.noNetwork ??
+                'Turn on mobile data or Wi-Fi to load the map.'}
+            </Text>
+          </View>
+        )}
+
         <View style={styles.textBlock}>
-          {/* paddingTop lets matras on the heading render without clipping */}
           <Text style={styles.heading}>{t.permission.heading}</Text>
           <Text style={styles.body}>{t.permission.body}</Text>
 
           <View style={styles.featureList}>
             {t.permission.features.map((f, i) => (
               <View key={i} style={styles.featureRow}>
-                {/* flex-start so icon stays at top when text wraps in Hindi/Marathi */}
                 <View style={styles.featureIconWrap}>
                   <Icon name={FEATURE_ICONS[i]} size={18} stroke={Colors.ink} />
                 </View>
@@ -191,6 +259,7 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
             label={t.permission.allowBtn}
             onPress={requestPermission}
             loading={requesting}
+            disabled={!isConnected}
             variant="primary"
             size="lg"
             style={styles.allowBtn}
@@ -199,6 +268,7 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
           <NCButton
             label={t.permission.allowBtn}
             onPress={goHome}
+            loading={advancing}
             variant="primary"
             size="lg"
             style={styles.allowBtn}
@@ -255,6 +325,35 @@ const styles = StyleSheet.create({
     borderWidth: 5,
     borderColor: '#fff',
   },
+  locatingOverlay: {
+    position: 'absolute',
+    bottom: vscale(10),
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: fscale(6),
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    paddingHorizontal: fscale(12),
+    paddingVertical: fscale(6),
+    borderRadius: Radii.lg,
+  },
+  locatingText: {
+    color: '#fff',
+    fontSize: fscale(12),
+    fontWeight: '600',
+  },
+  networkBanner: {
+    marginTop: vscale(10),
+    backgroundColor: '#FFF4E5',
+    borderRadius: Radii.md,
+    paddingHorizontal: fscale(12),
+    paddingVertical: fscale(8),
+  },
+  networkBannerText: {
+    fontSize: fscale(12.5),
+    color: '#8A5A00',
+    lineHeight: fscale(18),
+  },
   textBlock: {
     marginTop: vscale(22),
   },
@@ -263,16 +362,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0,
     color: Colors.ink,
-    // paddingTop so top matras (ि ्) aren't clipped
     paddingTop: fscale(6),
-    // 1.45× lineHeight for Devanagari
     lineHeight: fscale(38),
   },
   body: {
     marginTop: Spacing.sm,
     fontSize: fscale(14),
     color: Colors.textSecondary,
-    // 1.6× lineHeight for multi-line Devanagari
     lineHeight: fscale(22),
     paddingTop: fscale(4),
   },
@@ -282,7 +378,6 @@ const styles = StyleSheet.create({
   },
   featureRow: {
     flexDirection: 'row',
-    // flex-start: icon stays at top, text wraps freely below
     alignItems: 'flex-start',
     gap: Spacing.md,
   },
@@ -293,13 +388,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.borderSoft,
     alignItems: 'center',
     justifyContent: 'center',
-    // keeps icon vertically centred relative to first text line
     marginTop: fscale(2),
     flexShrink: 0,
   },
   featureTextWrap: {
     flex: 1,
-    // paddingTop so top matras on feature titles aren't cut
     paddingTop: fscale(2),
   },
   featureTitle: {

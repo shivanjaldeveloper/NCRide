@@ -10,6 +10,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { check, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
@@ -21,6 +22,11 @@ type Props = NativeStackScreenProps<RootStackParamList, 'OTPVerify'>;
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 42;
+
+const getLocationPermissionType = () =>
+  Platform.OS === 'android'
+    ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
+    : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
 
 const OTPVerifyScreen = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
@@ -67,7 +73,19 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
     setLoading(true);
     await new Promise(r => setTimeout(r, 900));
     setLoading(false);
-    navigation.replace('LocationPermission');
+
+    // route based on whether location permission is already granted -
+    // only show the LocationPermission screen if we still need to ask
+    try {
+      const status = await check(getLocationPermissionType());
+      if (status === RESULTS.GRANTED) {
+        navigation.replace('HomeTabs');
+      } else {
+        navigation.replace('LocationPermission');
+      }
+    } catch {
+      navigation.replace('LocationPermission');
+    }
   };
 
   const handleResend = () => {
@@ -104,7 +122,6 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
 
           <View style={styles.sentBadge}>
             <View style={styles.greenDot} />
-            {/* paddingTop on sentText so top matras aren't cut */}
             <Text style={styles.sentText}>
               {t.auth.codeSentTo}
               {phone}
@@ -113,7 +130,6 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
 
           <Text style={styles.heading}>{t.auth.enterCode}</Text>
 
-          {/* subRow: alignItems flex-start so Devanagari text doesn't clip against baseline */}
           <View style={styles.subRow}>
             <Text style={styles.subText}>{t.auth.otpSubLabel}</Text>
             <TouchableOpacity onPress={() => navigation.goBack()}>
@@ -121,7 +137,6 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
             </TouchableOpacity>
           </View>
 
-          {/* OTP boxes — digits only, no matra issues here */}
           <View style={styles.boxRow}>
             {Array.from({ length: OTP_LENGTH }).map((_, i) => (
               <TextInput
@@ -144,7 +159,6 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
           </View>
 
           <TouchableOpacity onPress={handleResend} disabled={countdown > 0}>
-            {/* paddingTop so Devanagari resend text isn't clipped */}
             <Text style={styles.resend}>
               {countdown > 0 ? (
                 <>
@@ -207,7 +221,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing.xs,
     marginBottom: Spacing.md,
-    // paddingTop keeps matras above the row visible
     paddingTop: fscale(4),
   },
   greenDot: {
@@ -228,7 +241,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0,
     color: Colors.ink,
-    // paddingTop + generous lineHeight for Devanagari matras
     paddingTop: fscale(6),
     lineHeight: fscale(40),
     marginBottom: Spacing.xs,
@@ -239,7 +251,6 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: fscale(4),
     marginBottom: vscale(28),
-    // paddingTop so matras on the first word aren't clipped
     paddingTop: fscale(4),
   },
   subText: {
@@ -257,12 +268,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
     marginBottom: vscale(14),
-    // paddingTop so box tops don't clip on very small screens
     paddingTop: fscale(2),
   },
   box: {
     flex: 1,
-    // taller box gives digit rendering more room
     height: fscale(64),
     borderRadius: Radii.lg,
     backgroundColor: Colors.ink,
@@ -280,7 +289,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     marginBottom: vscale(16),
-    // paddingTop for Devanagari matras on resend text
     paddingTop: fscale(4),
     lineHeight: fscale(22),
   },
