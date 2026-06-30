@@ -6,6 +6,7 @@ import {
   Platform,
   Animated,
   Easing,
+  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
@@ -14,11 +15,11 @@ import {
   RESULTS,
   openSettings,
 } from 'react-native-permissions';
+import RNMapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
 import { NCButton, Icon } from '../../components/common';
 import type { IconName } from '../../components/common';
-import { MapView } from '../../components/map';
 import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
 
@@ -26,10 +27,20 @@ type Props = NativeStackScreenProps<RootStackParamList, 'LocationPermission'>;
 
 const FEATURE_ICONS: IconName[] = ['locate', 'route', 'shield'];
 
+const DEFAULT_REGION = {
+  latitude: 28.6139,
+  longitude: 77.209,
+  latitudeDelta: 0.05,
+  longitudeDelta: 0.05,
+};
+
 const LocationPermissionScreen = ({ navigation }: Props) => {
   const { t } = useTranslation();
   const [requesting, setRequesting] = useState(false);
+  const [mapLoading, setMapLoading] = useState(true);
+  const [locationGranted, setLocationGranted] = useState(false);
   const pulse = useRef(new Animated.Value(0)).current;
+  const mapRef = useRef<RNMapView>(null);
 
   useEffect(() => {
     Animated.loop(
@@ -42,6 +53,28 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
     ).start();
   }, [pulse]);
 
+  useEffect(() => {
+    checkInitialLocation();
+  }, []);
+
+  // silent check on mount so the real map can render immediately if
+  // permission was already granted in a previous session
+  const checkInitialLocation = async () => {
+    try {
+      setMapLoading(true);
+      const permission =
+        Platform.OS === 'android'
+          ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
+          : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
+      const result = await request(permission);
+      setLocationGranted(result === RESULTS.GRANTED);
+    } catch {
+      setLocationGranted(false);
+    } finally {
+      setMapLoading(false);
+    }
+  };
+
   const goHome = () => navigation.replace('HomeTabs');
 
   const requestPermission = async () => {
@@ -52,12 +85,31 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
           ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
           : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
       const result = await request(permission);
-      if (result === RESULTS.BLOCKED) openSettings();
-      goHome();
+      if (result === RESULTS.GRANTED) {
+        setLocationGranted(true);
+        goHome();
+      } else if (result === RESULTS.BLOCKED) {
+        openSettings();
+      }
     } catch {
       goHome();
     } finally {
       setRequesting(false);
+    }
+  };
+
+  const onUserLocationChange = (event: any) => {
+    const { coordinate } = event.nativeEvent;
+    if (coordinate && mapRef.current) {
+      mapRef.current.animateToRegion(
+        {
+          latitude: coordinate.latitude,
+          longitude: coordinate.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        1000,
+      );
     }
   };
 
@@ -78,17 +130,37 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
     >
       <View style={styles.container}>
         <View style={styles.mapWrap}>
-          <MapView height={fscale(300)} showRoute={false} showControls={false}>
-            <View style={styles.centerDotWrap}>
-              <Animated.View
-                style={[
-                  styles.pulseRing,
-                  { opacity: pulseOpacity, transform: [{ scale: pulseScale }] },
-                ]}
-              />
-              <View style={styles.centerDot} />
+          {mapLoading ? (
+            <View style={styles.mapFallback}>
+              <ActivityIndicator size="large" color={Colors.blue} />
             </View>
-          </MapView>
+          ) : locationGranted ? (
+            <RNMapView
+              ref={mapRef}
+              provider={PROVIDER_GOOGLE}
+              style={styles.map}
+              initialRegion={DEFAULT_REGION}
+              showsUserLocation
+              showsMyLocationButton={false}
+              followsUserLocation
+              onUserLocationChange={onUserLocationChange}
+            />
+          ) : (
+            <View style={styles.mapFallback}>
+              <View style={styles.centerDotWrap}>
+                <Animated.View
+                  style={[
+                    styles.pulseRing,
+                    {
+                      opacity: pulseOpacity,
+                      transform: [{ scale: pulseScale }],
+                    },
+                  ]}
+                />
+                <View style={styles.centerDot} />
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.textBlock}>
@@ -114,14 +186,24 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
 
         <View style={{ flex: 1 }} />
 
-        <NCButton
-          label={t.permission.allowBtn}
-          onPress={requestPermission}
-          loading={requesting}
-          variant="primary"
-          size="lg"
-          style={styles.allowBtn}
-        />
+        {!locationGranted ? (
+          <NCButton
+            label={t.permission.allowBtn}
+            onPress={requestPermission}
+            loading={requesting}
+            variant="primary"
+            size="lg"
+            style={styles.allowBtn}
+          />
+        ) : (
+          <NCButton
+            label={t.permission.allowBtn}
+            onPress={goHome}
+            variant="primary"
+            size="lg"
+            style={styles.allowBtn}
+          />
+        )}
         <NCButton
           label={t.permission.laterBtn}
           onPress={goHome}
@@ -141,15 +223,20 @@ const styles = StyleSheet.create({
     paddingBottom: vscale(36),
   },
   mapWrap: {
+    height: fscale(300),
     borderRadius: Radii.xl,
     overflow: 'hidden',
+    backgroundColor: Colors.borderSoft,
+  },
+  map: {
+    flex: 1,
+  },
+  mapFallback: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   centerDotWrap: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    width: 0,
-    height: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },

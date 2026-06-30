@@ -12,6 +12,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { HeaderBack } from '../../components/layout';
 import { NCButton, NCCard, Icon } from '../../components/common';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
+import { useTranslation } from '../../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Referrals'>;
 
@@ -32,12 +33,13 @@ const INVITES: Invite[] = [
 ];
 
 const ReferralsScreen = ({ navigation }: Props) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.root}>
       <View style={{ paddingTop: insets.top, backgroundColor: '#F8F1FF' }}>
-        <HeaderBack title="Refer & earn" onBack={() => navigation.goBack()} />
+        <HeaderBack title={t.referrals.title} onBack={() => navigation.goBack()} />
       </View>
 
       <ScrollView
@@ -48,15 +50,12 @@ const ReferralsScreen = ({ navigation }: Props) => {
           <View style={styles.heroIconWrap}>
             <Icon name="refer" size={48} stroke={Colors.ink} sw={1.6} />
           </View>
-          <Text style={styles.heroTitle}>Give ₹500, get ₹500</Text>
-          <Text style={styles.heroSub}>
-            Invite a friend to NCRide. When they take their first ride, you both
-            get ₹500 wallet credit.
-          </Text>
+          <Text style={styles.heroTitle}>{t.referrals.heroTitle}</Text>
+          {t.referrals.heroSub}
         </View>
 
         <NCCard>
-          <Text style={styles.label}>YOUR REFERRAL CODE</Text>
+          <Text style={styles.label}>{t.referrals.codeLabel}</Text>
           <View style={styles.codeRow}>
             <Icon name="qr" size={20} stroke={Colors.lime} />
             <View style={{ flex: 1 }}>
@@ -72,7 +71,7 @@ const ReferralsScreen = ({ navigation }: Props) => {
         <View style={styles.shareRow}>
           <View style={{ flex: 1 }}>
             <NCButton
-              label="Share link"
+              label={t.referrals.shareBtn}
               icon="link"
               onPress={() => {}}
               variant="primary"
@@ -81,7 +80,7 @@ const ReferralsScreen = ({ navigation }: Props) => {
           </View>
           <View style={{ flex: 1 }}>
             <NCButton
-              label="WhatsApp"
+              label={t.referrals.whatsappBtn}
               icon="chat"
               onPress={() => {}}
               variant="glass"
@@ -90,7 +89,7 @@ const ReferralsScreen = ({ navigation }: Props) => {
           </View>
         </View>
 
-        <Text style={styles.sectionLabel}>YOUR INVITES</Text>
+        <Text style={styles.sectionLabel}>{t.referrals.invitesLabel}</Text>
         <NCCard pad={4}>
           {INVITES.map((inv, i) => (
             <View key={inv.name}>

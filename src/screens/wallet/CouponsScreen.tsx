@@ -12,6 +12,7 @@ import type { RootStackParamList } from '../../navigation/types';
 import { HeaderBack } from '../../components/layout';
 import { NCCard, Icon } from '../../components/common';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
+import { useTranslation } from '../../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Coupons'>;
 
@@ -37,6 +38,7 @@ const COUPONS: Coupon[] = [
 ];
 
 const CouponsScreen = ({ navigation }: Props) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   return (
@@ -45,7 +47,7 @@ const CouponsScreen = ({ navigation }: Props) => {
         style={{ paddingTop: insets.top, backgroundColor: Colors.bgOffWhite }}
       >
         <HeaderBack
-          title="Coupons & offers"
+          title={t.coupons.title}
           sub={`${COUPONS.length} available`}
           onBack={() => navigation.goBack()}
         />
@@ -71,9 +73,9 @@ const CouponsScreen = ({ navigation }: Props) => {
               <Text style={styles.off}>{c.off}</Text>
               <Text style={styles.desc}>{c.desc}</Text>
               <View style={styles.footerRow}>
-                <Text style={styles.validity}>Valid till 30 Apr 2026</Text>
+                <Text style={styles.validity}>{t.coupons.expiryPrefix} 30 Apr 2026</Text>
                 <TouchableOpacity style={styles.copyBtn} activeOpacity={0.8}>
-                  <Text style={styles.copyText}>COPY</Text>
+                  <Text style={styles.copyText}>{t.common.apply}</Text>
                 </TouchableOpacity>
               </View>
             </View>

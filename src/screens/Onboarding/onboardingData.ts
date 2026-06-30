@@ -11,20 +11,20 @@ export interface OnboardingSlide {
 export const SLIDES: OnboardingSlide[] = [
   {
     id: '1',
-    title: 'Rides for every need in MAHARASHTRA.',
+    title: 'Rides for every need in NCR.',
     subtitle:
-      'Cars, bikes, autos, e-rickshaws and intercity rides — premium MAHARASHTRA mobility with one tap.',
+      'Cars, bikes, autos, e-rickshaws and intercity rides — premium NCR mobility with one tap.',
   },
   {
     id: '2',
     title: 'Auto, E-Rickshaw & intercity — all in one.',
     subtitle:
-      'Book an auto for quick errands, an e-rickshaw for short hops, or a premium car for longer trips. Alo Alo has it all.',
+      'Book an auto for quick errands, an e-rickshaw for short hops, or a premium car for longer trips. NCRide has it all.',
   },
   {
     id: '3',
     title: 'Live tracking. SOS. Ride safely.',
     subtitle:
-      'Track your ride live, share with family, and tap SOS anytime. Alo Alo keeps every journey safe.',
+      'Track your ride live, share with family, and tap SOS anytime. NCRide keeps every journey safe.',
   },
 ];

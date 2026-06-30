@@ -61,7 +61,6 @@ const OTPLoginScreen = ({ navigation }: Props) => {
           <Text style={styles.inputLabel}>{t.auth.mobileNumber}</Text>
           <View style={styles.inputRow}>
             <View style={styles.countryBadge}>
-              <Text style={styles.flag}>🇮🇳</Text>
               <Text style={styles.dialCode}>+91</Text>
             </View>
             <View style={styles.divider} />

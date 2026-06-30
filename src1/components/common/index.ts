@@ -1,9 +1,0 @@
-export { default as NCButton } from './NCButton';
-export { default as PaginatorDots } from './PaginatorDots';
-export { default as NCCard } from './NCCard';
-export { default as Icon } from './Icon';
-export { default as ServiceTile } from './ServiceTile';
-export { default as Row } from './Row';
-export { default as Stars } from './Stars';
-export { ICONS } from './iconPaths';
-export type { IconName } from './iconPaths';

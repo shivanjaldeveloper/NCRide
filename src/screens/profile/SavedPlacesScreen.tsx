@@ -9,6 +9,7 @@ import { NCCard, Icon, Row } from '../../components/common';
 import type { IconName } from '../../components/common';
 import { MapView } from '../../components/map';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
+import { useTranslation } from '../../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SavedPlaces'>;
 
@@ -56,6 +57,7 @@ const PLACES: SavedPlace[] = [
 ];
 
 const SavedPlacesScreen = ({ navigation }: Props) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
   return (
@@ -64,7 +66,7 @@ const SavedPlacesScreen = ({ navigation }: Props) => {
         style={{ paddingTop: insets.top, backgroundColor: Colors.bgOffWhite }}
       >
         <HeaderBack
-          title="Saved places"
+          title={t.savedPlaces.title}
           onBack={() => navigation.goBack()}
           right={
             <TouchableOpacity style={styles.addBtn} activeOpacity={0.8}>

@@ -158,7 +158,7 @@ const SplashScreen = ({ navigation }: Props) => {
       </Animated.View>
       <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
         <Text style={styles.brandName}>Alo Alo</Text>
-        <Text style={styles.brandSub}>MAHARASHTRA · BEED . AURANGABAD</Text>
+        <Text style={styles.brandSub}>Maharashtra · Beed . Aurangabad</Text>
       </Animated.View>
 
       <Animated.View style={[styles.bottomWrap, { opacity: loaderOpacity }]}>

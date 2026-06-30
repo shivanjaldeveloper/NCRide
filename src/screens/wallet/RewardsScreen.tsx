@@ -7,6 +7,7 @@ import { HeaderBack } from '../../components/layout';
 import { NCButton, NCCard, Icon, Row } from '../../components/common';
 import type { IconName } from '../../components/common';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
+import { useTranslation } from '../../i18n';
 import LinearGradient from 'react-native-linear-gradient';
 import Svg, { Defs, RadialGradient, Stop, Ellipse } from 'react-native-svg';
 
@@ -53,6 +54,7 @@ const REDEEMABLES: Redeemable[] = [
 ];
 
 const RewardsScreen = ({ navigation }: Props) => {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [cardSize, setCardSize] = React.useState({ w: 0, h: 0 });
 
@@ -62,8 +64,8 @@ const RewardsScreen = ({ navigation }: Props) => {
         style={{ paddingTop: insets.top, backgroundColor: Colors.bgOffWhite }}
       >
         <HeaderBack
-          title="NCRide Rewards"
-          sub="Tier · Sapphire"
+          title={t.rewards.title}
+          sub={t.rewards.tierLabel}
           onBack={() => navigation.goBack()}
         />
       </View>
@@ -115,7 +117,7 @@ const RewardsScreen = ({ navigation }: Props) => {
             </View>
           </View>
 
-          <Text style={styles.progressLabel}>160 PTS TO PLATINUM</Text>
+          <Text style={styles.progressLabel}>{t.rewards.nextTier.toUpperCase()}</Text>
           <View style={styles.progressTrack}>
             <LinearGradient
               colors={['#3478F6', '#5A9DF9', '#84C8E6', '#A7DB9B', '#C7F14C']}
@@ -131,7 +133,7 @@ const RewardsScreen = ({ navigation }: Props) => {
           </View>
         </View>
 
-        <Text style={styles.sectionLabel}>THIS WEEK</Text>
+        <Text style={styles.sectionLabel}>{t.rewards.weeklyOffers}</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -150,7 +152,7 @@ const RewardsScreen = ({ navigation }: Props) => {
           ))}
         </ScrollView>
 
-        <Text style={styles.sectionLabel}>REDEEM</Text>
+        <Text style={styles.sectionLabel}>{t.rewards.redeem}</Text>
         <NCCard pad={4}>
           {REDEEMABLES.map(r => (
             <Row
@@ -160,7 +162,7 @@ const RewardsScreen = ({ navigation }: Props) => {
               sub={r.cost}
               right={
                 <NCButton
-                  label="Redeem"
+                  label={t.rewards.redeemBtn}
                   onPress={() => {}}
                   variant="ghost"
                   size="sm"
