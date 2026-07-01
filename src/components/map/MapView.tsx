@@ -4,13 +4,21 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
   Platform,
+  Animated,
+  Easing,
   ViewStyle,
 } from 'react-native';
 import RNMapView, { PROVIDER_GOOGLE } from 'react-native-maps';
-import { check, PERMISSIONS, RESULTS } from 'react-native-permissions';
+import { openSettings } from 'react-native-permissions';
 import { Colors, Radii } from '../../theme';
 import Icon from '../common/Icon';
+import {
+  checkLocationPermission,
+  requestLocationPermission,
+  type LocationStatus,
+} from '../../utils/location';
 
 interface Props {
   height?: number;
@@ -18,79 +26,81 @@ interface Props {
   showControls?: boolean;
   pickup?: string;
   drop?: string;
-  /**
-   * Kept for API compatibility with existing call sites. Real-map version
-   * has no SVG vehicle marker to animate, so this is a no-op here too.
-   */
-  animateVehicle?: boolean;
+  animateVehicle?: boolean; // kept for API compatibility, no-op
   style?: ViewStyle;
   children?: React.ReactNode;
 }
 
-const DEFAULT_REGION = {
-  latitude: 28.6139,
-  longitude: 77.209,
-  latitudeDelta: 0.05,
-  longitudeDelta: 0.05,
-};
+type PermState = 'checking' | 'granted' | 'denied' | 'blocked';
 
-const getLocationPermissionType = () =>
-  Platform.OS === 'android'
-    ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
-    : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
-
-/**
- * MapView
- * Real react-native-maps instance showing the user's live location.
- * Same props API as the previous illustrated-SVG version so every existing
- * call site (location permission, ride tracking, location picker, Home)
- * keeps working unchanged.
- *
- * Note: `showRoute` no longer draws a fabricated polyline between pickup
- * and drop, since those are just display strings without real lat/lng -
- * a route line on a real map needs real coordinates. The pickup/drop
- * label chips still render as before.
- */
 const MapView = ({
   height = 280,
   showRoute = true,
   showControls = true,
-  pickup = 'Sector 62, Noida',
-  drop = 'Connaught Place',
+  pickup = 'Pickup',
+  drop = 'Destination',
   style,
   children,
 }: Props) => {
   const mapRef = useRef<RNMapView>(null);
-  const [locationGranted, setLocationGranted] = useState(false);
-  const [checked, setChecked] = useState(false);
-  // tracks current zoom so the + / - controls can step it without
-  // needing a live region-change listener
-  const zoomDeltaRef = useRef({
-    latitudeDelta: DEFAULT_REGION.latitudeDelta,
-    longitudeDelta: DEFAULT_REGION.longitudeDelta,
-  });
-  const lastKnownCoordRef = useRef<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const hasCenteredOnLiveFix = useRef(false);
+  const [permState, setPermState] = useState<PermState>('checking');
+  const [hasFirstFix, setHasFirstFix] = useState(false);
+  const [requesting, setRequesting] = useState(false);
+  const pulse = useRef(new Animated.Value(0)).current;
+  const zoomDeltaRef = useRef({ latitudeDelta: 0.01, longitudeDelta: 0.01 });
+  const lastCoordRef = useRef<{ latitude: number; longitude: number } | null>(
+    null,
+  );
+  const hasCenteredRef = useRef(false);
 
   useEffect(() => {
-    // read-only check, never prompts - by the time a screen renders this
-    // component, permission should already have been requested via the
-    // LocationPermission screen earlier in the flow
-    check(getLocationPermissionType())
-      .then(result => setLocationGranted(result === RESULTS.GRANTED))
-      .catch(() => setLocationGranted(false))
-      .finally(() => setChecked(true));
+    checkLocationPermission().then(({ granted, blocked }) => {
+      if (granted) setPermState('granted');
+      else if (blocked) setPermState('blocked');
+      else setPermState('denied');
+    });
   }, []);
 
+  // Pulse animation for the "not granted" fallback state
+  useEffect(() => {
+    if (permState === 'granted' || permState === 'checking') return;
+    Animated.loop(
+      Animated.timing(pulse, {
+        toValue: 1,
+        duration: 1800,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }),
+    ).start();
+  }, [permState, pulse]);
+
+  const handleEnableLocation = async () => {
+    if (requesting) return;
+    setRequesting(true);
+    try {
+      const { granted, blocked } = await requestLocationPermission();
+      if (granted) {
+        setPermState('granted');
+      } else if (blocked) {
+        setPermState('blocked');
+        openSettings();
+      } else {
+        setPermState('denied');
+      }
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  // Fired by the map's native location layer — no extra library.
+  // Centers camera on the real user coordinate on first fix only.
   const onUserLocationChange = (event: any) => {
     const { coordinate } = event.nativeEvent;
     if (!coordinate) return;
-    lastKnownCoordRef.current = coordinate;
-    if (hasCenteredOnLiveFix.current) return;
-    hasCenteredOnLiveFix.current = true;
+    lastCoordRef.current = coordinate;
+    if (hasCenteredRef.current) return;
+    hasCenteredRef.current = true;
+    setHasFirstFix(true);
     mapRef.current?.animateToRegion(
       {
         latitude: coordinate.latitude,
@@ -103,32 +113,30 @@ const MapView = ({
   };
 
   const zoomBy = (factor: number) => {
-    const center = lastKnownCoordRef.current ?? DEFAULT_REGION;
-    const nextLatDelta = Math.max(
+    const center = lastCoordRef.current;
+    if (!center) return; // no fix yet, nothing to zoom
+    const nextLat = Math.max(
       0.001,
       zoomDeltaRef.current.latitudeDelta * factor,
     );
-    const nextLngDelta = Math.max(
+    const nextLng = Math.max(
       0.001,
       zoomDeltaRef.current.longitudeDelta * factor,
     );
-    zoomDeltaRef.current = {
-      latitudeDelta: nextLatDelta,
-      longitudeDelta: nextLngDelta,
-    };
+    zoomDeltaRef.current = { latitudeDelta: nextLat, longitudeDelta: nextLng };
     mapRef.current?.animateToRegion(
       {
         latitude: center.latitude,
         longitude: center.longitude,
-        latitudeDelta: nextLatDelta,
-        longitudeDelta: nextLngDelta,
+        latitudeDelta: nextLat,
+        longitudeDelta: nextLng,
       },
       300,
     );
   };
 
   const recenter = () => {
-    const center = lastKnownCoordRef.current;
+    const center = lastCoordRef.current;
     if (!center) return;
     mapRef.current?.animateToRegion(
       {
@@ -141,25 +149,70 @@ const MapView = ({
     );
   };
 
+  const pulseScale = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.8],
+  });
+  const pulseOpacity = pulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.35, 0],
+  });
+
   return (
     <View style={[styles.wrap, height ? { height } : null, style]}>
-      {checked && locationGranted ? (
-        <RNMapView
-          ref={mapRef}
-          provider={PROVIDER_GOOGLE}
-          style={StyleSheet.absoluteFill}
-          initialRegion={DEFAULT_REGION}
-          showsUserLocation
-          showsMyLocationButton={false}
-          followsUserLocation={false}
-          onUserLocationChange={onUserLocationChange}
-        />
+      {permState === 'granted' ? (
+        <>
+          {/* No initialRegion — never shows fake coordinates.
+              The map renders at world zoom and immediately snaps to the user
+              when onUserLocationChange fires for the first time. */}
+          <RNMapView
+            ref={mapRef}
+            provider={PROVIDER_GOOGLE}
+            style={StyleSheet.absoluteFill}
+            showsUserLocation
+            showsMyLocationButton={false}
+            followsUserLocation={false}
+            onUserLocationChange={onUserLocationChange}
+          />
+          {/* Spinner covers the map until we have a real GPS fix */}
+          {!hasFirstFix && (
+            <View style={[StyleSheet.absoluteFill, styles.fixSpinner]}>
+              <ActivityIndicator size="large" color={Colors.blue} />
+            </View>
+          )}
+        </>
+      ) : permState === 'checking' ? (
+        // Brief checking state on mount
+        <View style={[StyleSheet.absoluteFill, styles.fixSpinner]}>
+          <ActivityIndicator size="large" color={Colors.blue} />
+        </View>
       ) : (
-        <View style={[StyleSheet.absoluteFill, styles.fallback]} />
+        // Denied or blocked — tappable fallback with pulse dot
+        <TouchableOpacity
+          style={[StyleSheet.absoluteFill, styles.fallback]}
+          activeOpacity={0.85}
+          onPress={handleEnableLocation}
+          disabled={requesting}
+        >
+          <View style={styles.centerDotWrap}>
+            <Animated.View
+              style={[
+                styles.pulseRing,
+                { opacity: pulseOpacity, transform: [{ scale: pulseScale }] },
+              ]}
+            />
+            <View style={styles.centerDot} />
+          </View>
+          <Text style={styles.fallbackText}>
+            {permState === 'blocked'
+              ? 'Location blocked. Tap to open settings.'
+              : 'Tap to enable location'}
+          </Text>
+        </TouchableOpacity>
       )}
 
-      {/* floating zoom/locate controls */}
-      {showControls && (
+      {/* Zoom + recenter controls — only when map is live and we have a fix */}
+      {showControls && permState === 'granted' && hasFirstFix && (
         <View style={styles.controls}>
           <TouchableOpacity
             style={styles.controlBtn}
@@ -185,7 +238,7 @@ const MapView = ({
         </View>
       )}
 
-      {/* pickup/drop label chips */}
+      {/* Pickup / drop label chips */}
       {showRoute && (
         <View style={styles.chips}>
           <View style={styles.chip}>
@@ -222,8 +275,37 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.map,
     position: 'relative',
   },
+  fixSpinner: {
+    backgroundColor: Colors.map,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   fallback: {
     backgroundColor: Colors.map,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerDotWrap: { alignItems: 'center', justifyContent: 'center' },
+  pulseRing: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(46,125,255,0.35)',
+  },
+  centerDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Colors.blue,
+    borderWidth: 5,
+    borderColor: '#fff',
+  },
+  fallbackText: {
+    marginTop: 14,
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: Colors.textSecondary,
   },
   controls: {
     position: 'absolute',
@@ -264,14 +346,8 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: Colors.border,
   },
-  chipDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  chipDotSquare: {
-    borderRadius: 2,
-  },
+  chipDot: { width: 8, height: 8, borderRadius: 4 },
+  chipDotSquare: { borderRadius: 2 },
   chipText: {
     fontSize: 12,
     fontWeight: '600',

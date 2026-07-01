@@ -76,6 +76,13 @@ const en = {
     ],
     allowBtn: 'Allow precise location',
     laterBtn: 'Maybe later',
+    servicesHeading: 'Turn on device location',
+    servicesBody:
+      'Location permission is granted, but your device location (GPS) is off. Turn it on to continue.',
+    enableLocationBtn: 'Turn on location',
+    openSettingsBtn: 'Open Settings',
+    locating: 'Got your location!',
+    noNetwork: 'Turn on mobile data or Wi-Fi to load the map.',
   },
   home: {
     greeting: 'GOOD MORNING',
@@ -470,6 +477,13 @@ const hi: TranslationKeys = {
     ],
     allowBtn: 'सटीक स्थान की अनुमति दें',
     laterBtn: 'शायद बाद में',
+    servicesHeading: 'डिवाइस लोकेशन चालू करें',
+    servicesBody:
+      'लोकेशन की अनुमति दी जा चुकी है, लेकिन आपके डिवाइस का लोकेशन (GPS) बंद है। जारी रखने के लिए इसे चालू करें।',
+    enableLocationBtn: 'लोकेशन चालू करें',
+    openSettingsBtn: 'सेटिंग्स खोलें',
+    locating: 'आपका स्थान मिल गया!',
+    noNetwork: 'मैप लोड करने के लिए मोबाइल डेटा या Wi-Fi चालू करें।',
   },
   home: {
     greeting: 'सुप्रभात',
@@ -852,6 +866,13 @@ const mr: TranslationKeys = {
     ],
     allowBtn: 'अचूक स्थान परवानगी द्या',
     laterBtn: 'कदाचित नंतर',
+    servicesHeading: 'डिव्हाइस लोकेशन सुरू करा',
+    servicesBody:
+      'लोकेशन परवानगी दिली आहे, पण तुमच्या डिव्हाइसचे लोकेशन (GPS) बंद आहे. पुढे जाण्यासाठी ते सुरू करा.',
+    enableLocationBtn: 'लोकेशन सुरू करा',
+    openSettingsBtn: 'सेटिंग्ज उघडा',
+    locating: 'तुमचे स्थान मिळाले!',
+    noNetwork: 'मॅप लोड करण्यासाठी मोबाइल डेटा किंवा Wi-Fi सुरू करा.',
   },
   home: {
     greeting: 'सुप्रभात',

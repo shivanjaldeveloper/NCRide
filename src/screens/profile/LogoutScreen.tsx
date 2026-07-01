@@ -5,14 +5,15 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { NCButton, Icon } from '../../components/common';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
+import { clearAuth } from '../../utils/auth';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Logout'>;
 
 const LogoutScreen = ({ navigation }: Props) => {
   const insets = useSafeAreaInsets();
 
-  const handleLogout = () => {
-    // TODO: clear auth/session state here once auth storage is wired up.
+  const handleLogout = async () => {
+    await clearAuth();
     navigation.reset({ index: 0, routes: [{ name: 'Splash' }] });
   };
 
@@ -36,7 +37,7 @@ const LogoutScreen = ({ navigation }: Props) => {
           <Icon name="logout" size={32} stroke={Colors.red} sw={1.8} />
         </View>
 
-        <Text style={styles.title}>Log out of NCRide?</Text>
+        <Text style={styles.title}>Log out of Alo Alo?</Text>
         <Text style={styles.sub}>
           You can sign back in anytime with your mobile number. Your trips,
           wallet and rewards stay safe.

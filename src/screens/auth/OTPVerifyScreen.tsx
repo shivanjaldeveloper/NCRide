@@ -10,23 +10,19 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { check, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell } from '../../components/layout';
 import { NCButton, Icon } from '../../components/common';
 import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
+import { setLoggedIn } from '../../utils/auth';
+import { checkFullLocationStatus } from '../../utils/location';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OTPVerify'>;
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 42;
-
-const getLocationPermissionType = () =>
-  Platform.OS === 'android'
-    ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
-    : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
 
 const OTPVerifyScreen = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
@@ -71,20 +67,25 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
     if (otpString.length < OTP_LENGTH) return;
     Keyboard.dismiss();
     setLoading(true);
-    await new Promise(r => setTimeout(r, 900));
-    setLoading(false);
-
-    // route based on whether location permission is already granted -
-    // only show the LocationPermission screen if we still need to ask
     try {
-      const status = await check(getLocationPermissionType());
-      if (status === RESULTS.GRANTED) {
+      // TODO: replace with real OTP verification API call
+      await new Promise(r => setTimeout(r, 900));
+
+      // Persist auth state so splash routes correctly on next launch
+      await setLoggedIn();
+
+      // Route based on whether BOTH permission AND GPS are already good.
+      // Only skip LocationPermission screen when both are true — permission
+      // alone isn't enough, otherwise a user with GPS off would land on
+      // Home and immediately hit the blocking guard there.
+      const locStatus = await checkFullLocationStatus();
+      if (locStatus.allGood) {
         navigation.replace('HomeTabs');
       } else {
         navigation.replace('LocationPermission');
       }
-    } catch {
-      navigation.replace('LocationPermission');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -281,9 +282,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.lime,
   },
-  boxFilled: {
-    backgroundColor: Colors.ink,
-  },
+  boxFilled: { backgroundColor: Colors.ink },
   resend: {
     fontSize: fscale(13.5),
     color: Colors.textSecondary,
@@ -292,10 +291,7 @@ const styles = StyleSheet.create({
     paddingTop: fscale(4),
     lineHeight: fscale(22),
   },
-  resendStrong: {
-    color: Colors.ink,
-    fontWeight: '700',
-  },
+  resendStrong: { color: Colors.ink, fontWeight: '700' },
   legal: {
     fontSize: fscale(11.5),
     color: Colors.textTertiary,

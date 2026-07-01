@@ -6,6 +6,7 @@ import {
   StatusBar,
   Easing,
   Dimensions,
+  Image,
 } from 'react-native';
 import Svg, {
   Path,
@@ -17,11 +18,12 @@ import Svg, {
 } from 'react-native-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Image } from 'react-native';
 
 import type { RootStackParamList } from '../../navigation/types';
 import { Colors, fscale } from '../../theme';
 import { getPersistedLocale } from '../../i18n';
+import { isLoggedIn } from '../../utils/auth';
+import { checkFullLocationStatus } from '../../utils/location';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
@@ -73,12 +75,29 @@ const SplashScreen = ({ navigation }: Props) => {
     ).start();
 
     const timer = setTimeout(async () => {
-      const savedLocale = await getPersistedLocale();
-      if (savedLocale) {
-        // Returning user — language already chosen, go to Onboarding
-        navigation.replace('Onboarding');
-      } else {
-        // First launch — pick language first
+      try {
+        const loggedIn = await isLoggedIn();
+
+        if (loggedIn) {
+          // Returning user — check if location is ready
+          const locStatus = await checkFullLocationStatus();
+          if (locStatus.allGood) {
+            navigation.replace('HomeTabs');
+          } else {
+            // Permission or services not ready — send to permission screen
+            navigation.replace('LocationPermission');
+          }
+        } else {
+          // New/logged-out user — start the onboarding flow
+          const savedLocale = await getPersistedLocale();
+          if (savedLocale) {
+            navigation.replace('Onboarding');
+          } else {
+            navigation.replace('LanguageSelect');
+          }
+        }
+      } catch {
+        // Fallback: start fresh
         navigation.replace('LanguageSelect');
       }
     }, SPLASH_DURATION_MS);
@@ -99,7 +118,6 @@ const SplashScreen = ({ navigation }: Props) => {
         barStyle="light-content"
       />
 
-      {/* Full-screen SVG background with true RadialGradient — perfectly smooth, zero rings */}
       <Svg
         width={SW}
         height={SH}
@@ -107,22 +125,17 @@ const SplashScreen = ({ navigation }: Props) => {
         pointerEvents="none"
       >
         <Defs>
-          {/* Lime/green glow for top-left */}
           <RadialGradient id="glowLime" cx="50%" cy="50%" r="50%">
             <Stop offset="0%" stopColor="#8EC000" stopOpacity="0.22" />
             <Stop offset="40%" stopColor="#4A7000" stopOpacity="0.06" />
             <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
           </RadialGradient>
-
-          {/* Blue glow for bottom-right */}
           <RadialGradient id="glowBlue" cx="50%" cy="50%" r="50%">
             <Stop offset="0%" stopColor="#1A4FCC" stopOpacity="0.24" />
             <Stop offset="40%" stopColor="#091A50" stopOpacity="0.07" />
             <Stop offset="100%" stopColor="#000000" stopOpacity="0" />
           </RadialGradient>
         </Defs>
-
-        {/* Lime glow — upper-left diagonal, large */}
         <Ellipse
           cx={SW * 0.25}
           cy={SH * 0.28}
@@ -130,8 +143,6 @@ const SplashScreen = ({ navigation }: Props) => {
           ry={SH * 0.52}
           fill="url(#glowLime)"
         />
-
-        {/* Blue glow — lower-right diagonal, large */}
         <Ellipse
           cx={SW * 0.75}
           cy={SH * 0.72}
@@ -144,10 +155,7 @@ const SplashScreen = ({ navigation }: Props) => {
       <Animated.View
         style={[
           styles.logoBox,
-          {
-            opacity: logoOpacity,
-            transform: [{ scale: logoScale }],
-          },
+          { opacity: logoOpacity, transform: [{ scale: logoScale }] },
         ]}
       >
         <Image
@@ -156,6 +164,7 @@ const SplashScreen = ({ navigation }: Props) => {
           resizeMode="contain"
         />
       </Animated.View>
+
       <Animated.View style={{ opacity: textOpacity, alignItems: 'center' }}>
         <Text style={styles.brandName}>Alo Alo</Text>
         <Text style={styles.brandSub}>Maharashtra · Beed . Aurangabad</Text>
@@ -196,10 +205,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoImage: {
-    width: fscale(90),
-    height: fscale(90),
-  },
+  logoImage: { width: fscale(90), height: fscale(90) },
   logoBox: {
     width: fscale(110),
     height: fscale(110),
@@ -233,10 +239,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: fscale(12),
   },
-  spinnerWrap: {
-    width: 28,
-    height: 28,
-  },
+  spinnerWrap: { width: 28, height: 28 },
   region: {
     fontSize: fscale(11),
     letterSpacing: 1.2,
