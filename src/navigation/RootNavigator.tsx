@@ -11,6 +11,7 @@ import LanguageSelectScreen from '../screens/language/LanguageSelectScreen';
 import OTPLoginScreen from '../screens/auth/OTPLoginScreen';
 import OTPVerifyScreen from '../screens/auth/OTPVerifyScreen';
 import LocationPermissionScreen from '../screens/Permissions/LocationPermissionScreen';
+import LocationPickerScreen from '../screens/location/LocationPickerScreen';
 import HomeTabs from './HomeTabs';
 import RideScreen from '../screens/ride/RideScreen';
 import DriverScreen from '../screens/ride/DriverScreen';
@@ -69,6 +70,11 @@ const AppNavigator = () => (
         name="LocationPermission"
         component={LocationPermissionScreen}
         options={{ animation: 'slide_from_right' }}
+      />
+      <Stack.Screen
+        name="LocationPicker"
+        component={LocationPickerScreen}
+        options={{ animation: 'slide_from_bottom', gestureEnabled: true }}
       />
       <Stack.Screen
         name="HomeTabs"
@@ -198,7 +204,6 @@ const AppNavigator = () => (
   </NavigationContainer>
 );
 
-// I18nProvider wraps the entire navigator so every screen has access
 const RootNavigator = () => (
   <I18nProvider>
     <AppNavigator />

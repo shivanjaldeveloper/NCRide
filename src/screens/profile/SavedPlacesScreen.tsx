@@ -1,64 +1,121 @@
-import React from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useCallback, useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Path, Circle } from 'react-native-svg';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { HeaderBack } from '../../components/layout';
 import { NCCard, Icon, Row } from '../../components/common';
-import type { IconName } from '../../components/common';
 import { MapView } from '../../components/map';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
+import { useSavedPlaces } from './useSavedPlaces';
+import type { SavedPlace } from './useSavedPlaces';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SavedPlaces'>;
-
-interface SavedPlace {
-  icon: IconName;
-  title: string;
-  sub: string;
-  accent?: string;
-  pin: { x: number; y: number };
-}
-
-const PLACES: SavedPlace[] = [
-  {
-    icon: 'home',
-    title: 'Home',
-    sub: 'Sector 62, Noida, Tower 4, Flat 3B',
-    accent: '#E9F8E4',
-    pin: { x: 30, y: 60 },
-  },
-  {
-    icon: 'pin',
-    title: 'Work',
-    sub: 'Advant Navis Business Park, Sector 142',
-    accent: '#E8F1FF',
-    pin: { x: 60, y: 40 },
-  },
-  {
-    icon: 'pin',
-    title: 'Gym',
-    sub: 'DLF Mall of India, Sector 18, ground floor',
-    pin: { x: 75, y: 70 },
-  },
-  {
-    icon: 'pin',
-    title: 'Maa & Papa',
-    sub: 'Indirapuram, Ghaziabad',
-    pin: { x: 20, y: 30 },
-  },
-  {
-    icon: 'pin',
-    title: 'Best friend',
-    sub: 'Vaishali, Ghaziabad',
-    pin: { x: 50, y: 80 },
-  },
-];
 
 const SavedPlacesScreen = ({ navigation }: Props) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { places, loading, addPlace, updatePlace, removePlace } =
+    useSavedPlaces();
+
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState('');
+  const titleInputRef = useRef<TextInput>(null);
+
+  const startRenaming = useCallback((place: SavedPlace) => {
+    setDraftTitle(place.title);
+    setEditingTitleId(place.id);
+    setTimeout(() => titleInputRef.current?.focus(), 50);
+  }, []);
+
+  const commitRename = useCallback(
+    (id: string) => {
+      const trimmed = draftTitle.trim();
+      if (trimmed.length > 0) {
+        updatePlace(id, { title: trimmed });
+      }
+      setEditingTitleId(null);
+    },
+    [draftTitle, updatePlace],
+  );
+
+  // Opens with no initial coords so LocationPickerScreen's own auto-locate
+  // kicks in and refines against GOOD_ACCURACY_M before settling — same
+  // precise-fix behaviour as pickup/dropoff, no shortcuts taken here.
+  const handleAddPlace = useCallback(() => {
+    navigation.navigate('LocationPicker', {
+      field: 'dropoff',
+      onPick: result => {
+        console.log(
+          `[SavedPlaces] new place picked → address="${result.address}", lat=${result.lat}, lng=${result.lng}, accuracy=${result.accuracy}`,
+        );
+        const id = `place_${Date.now()}`;
+        const newPlace: SavedPlace = {
+          id,
+          icon: 'pin',
+          title: 'New Place',
+          sub: result.address,
+          lat: result.lat,
+          lng: result.lng,
+          accuracy: result.accuracy,
+        };
+        addPlace(newPlace);
+        startRenaming(newPlace);
+      },
+    });
+  }, [navigation, addPlace, startRenaming]);
+
+  const handleEditPlace = useCallback(
+    (place: SavedPlace) => {
+      navigation.navigate('LocationPicker', {
+        field: 'dropoff',
+        initialLat: place.lat,
+        initialLng: place.lng,
+        initialAddress: place.sub,
+        initialSource: 'manual',
+        onPick: result => {
+          console.log(
+            `[SavedPlaces] place ${place.id} updated → address="${result.address}", lat=${result.lat}, lng=${result.lng}, accuracy=${result.accuracy}`,
+          );
+          updatePlace(place.id, {
+            sub: result.address,
+            lat: result.lat,
+            lng: result.lng,
+            accuracy: result.accuracy,
+          });
+        },
+      });
+    },
+    [navigation, updatePlace],
+  );
+
+  const handleDeletePlace = useCallback(
+    (place: SavedPlace) => {
+      Alert.alert(
+        'Remove saved place',
+        `Remove "${place.title}" from your saved places?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: () => removePlace(place.id),
+          },
+        ],
+      );
+    },
+    [removePlace],
+  );
 
   return (
     <View style={styles.root}>
@@ -69,7 +126,11 @@ const SavedPlacesScreen = ({ navigation }: Props) => {
           title={t.savedPlaces.title}
           onBack={() => navigation.goBack()}
           right={
-            <TouchableOpacity style={styles.addBtn} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.addBtn}
+              activeOpacity={0.8}
+              onPress={handleAddPlace}
+            >
               <Icon name="plus" size={20} stroke={Colors.ink} />
             </TouchableOpacity>
           }
@@ -79,46 +140,83 @@ const SavedPlacesScreen = ({ navigation }: Props) => {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        <MapView height={fscale(180)} showRoute={false} showControls={false}>
-          {PLACES.map(p => (
-            <View
-              key={p.title}
-              style={[
-                styles.mapPin,
-                { left: `${p.pin.x}%`, top: `${p.pin.y}%` },
-              ]}
-              pointerEvents="none"
-            >
-              <Svg width={26} height={32} viewBox="0 0 28 34">
-                <Path
-                  d="M14 2 C 21 2 25 7 25 13 C 25 19 19 26 14 32 C 9 26 3 19 3 13 C 3 7 7 2 14 2 Z"
-                  fill={Colors.ink}
-                  stroke="#fff"
-                  strokeWidth={2}
-                />
-                <Circle cx={14} cy={13} r={4} fill={Colors.lime} />
-              </Svg>
-            </View>
-          ))}
-        </MapView>
+        {/* Plain decorative map — no pins, since these aren't real
+            positions relative to it */}
+        <MapView height={fscale(180)} showRoute={false} showControls={false} />
 
         <View style={styles.list}>
-          {PLACES.map(p => (
-            <NCCard key={p.title} pad={12} style={styles.placeCard}>
-              <Row
-                icon={p.icon}
-                title={p.title}
-                sub={p.sub}
-                accent={p.accent}
-                right={
-                  <TouchableOpacity style={styles.editBtn} activeOpacity={0.8}>
-                    <Icon name="edit" size={16} stroke={Colors.ink} />
-                  </TouchableOpacity>
-                }
-              />
-            </NCCard>
-          ))}
+          {loading && (
+            <View style={styles.centerWrap}>
+              <ActivityIndicator size="small" color={Colors.textTertiary} />
+            </View>
+          )}
+
+          {!loading && places.length === 0 && (
+            <View style={styles.centerWrap}>
+              <Icon name="pin" size={28} stroke={Colors.textTertiary} />
+              <Text style={styles.emptyTitle}>No saved places yet</Text>
+              <Text style={styles.emptyText}>
+                Tap the + button above to save your first location
+              </Text>
+            </View>
+          )}
+
+          {!loading &&
+            places.map(p => (
+              <TouchableOpacity
+                key={p.id}
+                activeOpacity={1}
+                onLongPress={() => handleDeletePlace(p)}
+                delayLongPress={400}
+              >
+                <NCCard pad={12} style={styles.placeCard}>
+                  {editingTitleId === p.id ? (
+                    <View style={styles.renameRow}>
+                      <TextInput
+                        ref={titleInputRef}
+                        style={styles.renameInput}
+                        value={draftTitle}
+                        onChangeText={setDraftTitle}
+                        placeholder="Place name"
+                        placeholderTextColor={Colors.textTertiary}
+                        returnKeyType="done"
+                        onSubmitEditing={() => commitRename(p.id)}
+                        onBlur={() => commitRename(p.id)}
+                      />
+                      <TouchableOpacity
+                        style={styles.doneBtn}
+                        onPress={() => commitRename(p.id)}
+                      >
+                        <Text style={styles.doneBtnText}>Done</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      activeOpacity={0.7}
+                      onPress={() => startRenaming(p)}
+                    >
+                      <Row
+                        icon={p.icon}
+                        title={p.title}
+                        sub={p.sub}
+                        accent={p.accent}
+                        right={
+                          <TouchableOpacity
+                            style={styles.editBtn}
+                            activeOpacity={0.8}
+                            onPress={() => handleEditPlace(p)}
+                          >
+                            <Icon name="edit" size={16} stroke={Colors.ink} />
+                          </TouchableOpacity>
+                        }
+                      />
+                    </TouchableOpacity>
+                  )}
+                </NCCard>
+              </TouchableOpacity>
+            ))}
         </View>
       </ScrollView>
     </View>
@@ -140,11 +238,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  mapPin: {
-    position: 'absolute',
-    transform: [{ translateX: -13 }, { translateY: -32 }],
-  },
-
   list: { marginTop: Spacing.md, gap: Spacing.sm },
   placeCard: {},
   editBtn: {
@@ -154,6 +247,48 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgOffWhite,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  centerWrap: {
+    paddingVertical: fscale(36),
+    alignItems: 'center',
+    gap: fscale(8),
+  },
+  emptyTitle: {
+    fontSize: fscale(14),
+    fontWeight: '700',
+    color: Colors.ink,
+    marginTop: fscale(4),
+  },
+  emptyText: {
+    fontSize: fscale(12.5),
+    color: Colors.textTertiary,
+    textAlign: 'center',
+    paddingHorizontal: fscale(24),
+  },
+
+  renameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  renameInput: {
+    flex: 1,
+    fontSize: fscale(14),
+    fontWeight: '600',
+    color: Colors.ink,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    paddingVertical: fscale(4),
+  },
+  doneBtn: {
+    paddingHorizontal: fscale(12),
+    paddingVertical: fscale(6),
+  },
+  doneBtnText: {
+    fontSize: fscale(13),
+    fontWeight: '700',
+    color: Colors.green,
   },
 });
 

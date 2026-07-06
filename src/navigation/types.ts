@@ -6,7 +6,31 @@ export type RootStackParamList = {
   OTPVerify: { phone: string };
   LocationPermission: undefined;
   HomeTabs: undefined;
-  Ride: { mode?: 'auto' | 'erickshaw' } | undefined;
+  // New: full-screen map location picker
+  LocationPicker: {
+    field: 'pickup' | 'drop';
+    initialLat?: number;
+    initialLng?: number;
+    initialAddress?: string;
+    // 'gps' = initial point came from device location and can be silently
+    // refreshed to a more accurate fix on open; 'manual' = user deliberately
+    // chose this point (search or map drag) and must NOT be auto-overridden.
+    initialSource?: 'gps' | 'manual';
+    // Called directly with the result and then navigation.goBack() — this
+    // hands the pick straight to whichever HomeScreen instance opened the
+    // picker via closure, instead of round-tripping through route params
+    // (which was liable to clobber whichever of FROM/TO was set second).
+    onPick: (result: {
+      address: string;
+      lat: number;
+      lng: number;
+      accuracy?: number;
+      source: 'gps' | 'manual';
+    }) => void;
+  };
+  Ride:
+    | { mode?: 'auto' | 'erickshaw'; pickup?: string; drop?: string }
+    | undefined;
   Driver: undefined;
   Tracking: undefined;
   Completed: undefined;
