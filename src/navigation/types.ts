@@ -3,7 +3,8 @@ export type RootStackParamList = {
   Onboarding: undefined;
   LanguageSelect: undefined;
   OTPLogin: undefined;
-  OTPVerify: { phone: string };
+  OTPVerify: { phone: string; otpTransaction: string };
+  Registration: { phone: string; username: string };
   LocationPermission: undefined;
   HomeTabs: undefined;
   // New: full-screen map location picker

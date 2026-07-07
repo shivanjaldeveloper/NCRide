@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
@@ -16,21 +17,64 @@ import { ScreenShell } from '../../components/layout';
 import { NCButton, Icon } from '../../components/common';
 import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
-import { setLoggedIn } from '../../utils/auth';
+import { setLoggedIn, setSession } from '../../utils/auth';
 import { checkFullLocationStatus } from '../../utils/location';
+import {
+  verifyNumber,
+  verifyOtp,
+  AuthApiError,
+  isAuthApiError,
+} from '../../services/authApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OTPVerify'>;
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 42;
 
+// TEMP: backend currently accepts a fixed test OTP regardless of what was
+// actually sent to the phone. We no longer auto-fill the boxes (so the
+// normal typing/validation flow gets exercised), but we still show a hint
+// so testers know what to type. Set SHOW_TEST_OTP_HINT to false once the
+// backend sends real, per-request OTPs via SMS.
+const TEST_OTP = '123456';
+const SHOW_TEST_OTP_HINT = true;
+
+// TEMP: shows the exact request/response (or thrown error) on a failed
+// verify, regardless of __DEV__ — turn this off once the live API
+// integration is confirmed stable, since it'll otherwise leak backend
+// response shapes to end users on a release build.
+const SHOW_VERBOSE_ERRORS = true;
+
 const OTPVerifyScreen = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
   const { phone } = route.params;
+  // The transaction id changes every time VerifyNumber is called (initial
+  // send + every resend), so it's kept in state rather than destructured
+  // once from route.params.
+  const [otpTransaction, setOtpTransaction] = useState(
+    route.params.otpTransaction,
+  );
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [countdown, setCountdown] = useState(RESEND_SECONDS);
   const inputRefs = useRef<(TextInput | null)[]>([]);
+
+  // Native-stack quirk: if 'OTPVerify' is already sitting in the stack (e.g.
+  // user went Back to OTPLogin and hit Send OTP again), navigation.navigate()
+  // reuses this *same mounted instance* and just merges in new route.params
+  // — it does NOT remount the screen. Since the otpTransaction state above
+  // only reads route.params.otpTransaction once (on mount), it would
+  // otherwise stay pinned to the very first transaction id forever, causing
+  // every subsequent verify to fail with "Invalid OTP" even after a fresh
+  // OTP was actually sent. This effect re-syncs local state any time the
+  // incoming otpTransaction param actually changes.
+  useEffect(() => {
+    setOtpTransaction(route.params.otpTransaction);
+    setOtp(Array(OTP_LENGTH).fill(''));
+    setCountdown(RESEND_SECONDS);
+    inputRefs.current[0]?.focus();
+  }, [route.params.otpTransaction]);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -63,37 +107,138 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
     }
   };
 
-  const handleVerify = async () => {
-    if (otpString.length < OTP_LENGTH) return;
-    Keyboard.dismiss();
-    setLoading(true);
+  // Shared "where do we go next" logic used both for existing users and
+  // right after a brand-new user finishes the registration screen.
+  const routeAfterLogin = async () => {
+    // Persist auth state so splash routes correctly on next launch
     try {
-      // TODO: replace with real OTP verification API call
-      await new Promise(r => setTimeout(r, 900));
-
-      // Persist auth state so splash routes correctly on next launch
       await setLoggedIn();
+    } catch (e) {
+      throw new Error(
+        `[step:setLoggedIn] ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
 
-      // Route based on whether BOTH permission AND GPS are already good.
-      // Only skip LocationPermission screen when both are true — permission
-      // alone isn't enough, otherwise a user with GPS off would land on
-      // Home and immediately hit the blocking guard there.
-      const locStatus = await checkFullLocationStatus();
+    // Route based on whether BOTH permission AND GPS are already good.
+    // Only skip LocationPermission screen when both are true — permission
+    // alone isn't enough, otherwise a user with GPS off would land on
+    // Home and immediately hit the blocking guard there.
+    let locStatus;
+    try {
+      locStatus = await checkFullLocationStatus();
+    } catch (e) {
+      throw new Error(
+        `[step:checkFullLocationStatus] ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+      );
+    }
+    try {
       if (locStatus.allGood) {
         navigation.replace('HomeTabs');
       } else {
         navigation.replace('LocationPermission');
+      }
+    } catch (e) {
+      throw new Error(
+        `[step:navigation.replace] ${
+          e instanceof Error ? e.message : String(e)
+        }`,
+      );
+    }
+  };
+
+  const handleVerify = async () => {
+    if (otpString.length < OTP_LENGTH || loading) return;
+    Keyboard.dismiss();
+    setLoading(true);
+    try {
+      const res = await verifyOtp(otpTransaction, otpString);
+
+      // Persist the session (cookie/username/name) returned by the server.
+      try {
+        await setSession(res.Cookie, res.Username, res.Name);
+      } catch (e) {
+        throw new Error(
+          `[step:setSession] ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+
+      if (!res.Name || res.Name.trim().length === 0) {
+        // Empty Name on file -> brand-new user, collect basic details
+        // before letting them into the app.
+        navigation.replace('Registration', {
+          phone,
+          username: res.Username,
+        });
+        return;
+      }
+
+      await routeAfterLogin();
+    } catch (err) {
+      // TEMP: always show full debug details (not gated behind __DEV__) while
+      // we're actively wiring up the live API — on a release/APK build
+      // __DEV__ is false, which was hiding every diagnostic line and made
+      // every failure look like a bare "Something went wrong." Re-add the
+      // __DEV__ gate (see SHOW_VERBOSE_ERRORS below) once the integration is
+      // confirmed stable end-to-end.
+      if (isAuthApiError(err)) {
+        if (SHOW_VERBOSE_ERRORS) {
+          Alert.alert(
+            'Verification failed',
+            [
+              err.message,
+              '',
+              `Sent: ${err.requestBody ?? '(no request body captured)'}`,
+              err.responseStatus != null
+                ? `HTTP status: ${err.responseStatus}`
+                : null,
+              err.responseBody != null
+                ? `Server response: ${JSON.stringify(err.responseBody)}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join('\n'),
+          );
+        } else {
+          Alert.alert('Verification failed', err.message);
+        }
+      } else {
+        Alert.alert(
+          'Verification failed',
+          `Something went wrong. Please try again.${
+            SHOW_VERBOSE_ERRORS
+              ? `\n\n${
+                  err instanceof Error
+                    ? `${err.name}: ${err.message}`
+                    : `Non-Error thrown: ${JSON.stringify(err)}`
+                }`
+              : ''
+          }`,
+        );
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const handleResend = () => {
-    if (countdown > 0) return;
-    setOtp(Array(OTP_LENGTH).fill(''));
-    setCountdown(RESEND_SECONDS);
-    inputRefs.current[0]?.focus();
+  const handleResend = async () => {
+    if (countdown > 0 || resending) return;
+    setResending(true);
+    try {
+      const res = await verifyNumber(phone);
+      setOtpTransaction(res.OtpTransaction);
+      setOtp(Array(OTP_LENGTH).fill(''));
+      setCountdown(RESEND_SECONDS);
+      inputRefs.current[0]?.focus();
+    } catch (err) {
+      const message = isAuthApiError(err)
+        ? err.message
+        : 'Something went wrong. Please try again.';
+      Alert.alert('Could not resend OTP', message);
+    } finally {
+      setResending(false);
+    }
   };
 
   const mm = String(Math.floor(countdown / 60)).padStart(2, '0');
@@ -159,7 +304,14 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
             ))}
           </View>
 
-          <TouchableOpacity onPress={handleResend} disabled={countdown > 0}>
+          {SHOW_TEST_OTP_HINT && (
+            <Text style={styles.testHint}>Test mode · OTP is {TEST_OTP}</Text>
+          )}
+
+          <TouchableOpacity
+            onPress={handleResend}
+            disabled={countdown > 0 || resending}
+          >
             <Text style={styles.resend}>
               {countdown > 0 ? (
                 <>
@@ -283,6 +435,13 @@ const styles = StyleSheet.create({
     color: Colors.lime,
   },
   boxFilled: { backgroundColor: Colors.ink },
+  testHint: {
+    fontSize: fscale(12),
+    fontWeight: '600',
+    color: Colors.amber,
+    textAlign: 'center',
+    marginBottom: vscale(10),
+  },
   resend: {
     fontSize: fscale(13.5),
     color: Colors.textSecondary,

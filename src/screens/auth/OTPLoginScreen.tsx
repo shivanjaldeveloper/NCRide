@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Alert,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
@@ -15,6 +16,7 @@ import { ScreenShell } from '../../components/layout';
 import { NCButton, Icon } from '../../components/common';
 import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
+import { verifyNumber, isAuthApiError } from '../../services/authApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OTPLogin'>;
 
@@ -25,11 +27,23 @@ const OTPLoginScreen = ({ navigation }: Props) => {
   const isValid = phone.replace(/\s/g, '').length === 10;
 
   const handleSend = async () => {
-    if (!isValid) return;
+    if (!isValid || loading) return;
+    const mobile = phone.replace(/\s/g, '');
     setLoading(true);
-    await new Promise(r => setTimeout(r, 800));
-    setLoading(false);
-    navigation.navigate('OTPVerify', { phone });
+    try {
+      const res = await verifyNumber(mobile);
+      navigation.navigate('OTPVerify', {
+        phone: mobile,
+        otpTransaction: res.OtpTransaction,
+      });
+    } catch (err) {
+      const message = isAuthApiError(err)
+        ? err.message
+        : 'Something went wrong. Please try again.';
+      Alert.alert('Could not send OTP', message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

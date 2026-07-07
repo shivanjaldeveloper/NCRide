@@ -10,6 +10,7 @@ import OnboardingScreen from '../screens/Onboarding/OnboardingScreen';
 import LanguageSelectScreen from '../screens/language/LanguageSelectScreen';
 import OTPLoginScreen from '../screens/auth/OTPLoginScreen';
 import OTPVerifyScreen from '../screens/auth/OTPVerifyScreen';
+import RegistrationScreen from '../screens/auth/RegistrationScreen';
 import LocationPermissionScreen from '../screens/Permissions/LocationPermissionScreen';
 import LocationPickerScreen from '../screens/location/LocationPickerScreen';
 import HomeTabs from './HomeTabs';
@@ -65,6 +66,11 @@ const AppNavigator = () => (
         name="OTPVerify"
         component={OTPVerifyScreen}
         options={{ animation: 'slide_from_right', gestureEnabled: true }}
+      />
+      <Stack.Screen
+        name="Registration"
+        component={RegistrationScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: false }}
       />
       <Stack.Screen
         name="LocationPermission"
