@@ -18,6 +18,12 @@ import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
 import { verifyNumber, isAuthApiError } from '../../services/authApi';
 
+// TEMP: shows the full API response (OtpTransaction, Mobile, etc.) in an
+// Alert before navigating on, so it can be read/screenshotted without
+// logcat/Metro access. Turn this off (set to false) once the integration
+// is confirmed stable.
+const SHOW_DEBUG_LOG = true;
+
 type Props = NativeStackScreenProps<RootStackParamList, 'OTPLogin'>;
 
 const OTPLoginScreen = ({ navigation }: Props) => {
@@ -26,16 +32,37 @@ const OTPLoginScreen = ({ navigation }: Props) => {
   const [loading, setLoading] = useState(false);
   const isValid = phone.replace(/\s/g, '').length === 10;
 
+  const goToOtpScreen = (mobile: string, otpTransaction: string) => {
+    navigation.navigate('OTPVerify', { phone: mobile, otpTransaction });
+  };
+
   const handleSend = async () => {
     if (!isValid || loading) return;
     const mobile = phone.replace(/\s/g, '');
     setLoading(true);
     try {
       const res = await verifyNumber(mobile);
-      navigation.navigate('OTPVerify', {
-        phone: mobile,
-        otpTransaction: res.OtpTransaction,
-      });
+      console.log('[OTPLoginScreen] VerifyNumber response:', res);
+
+      if (SHOW_DEBUG_LOG) {
+        Alert.alert(
+          'VerifyNumber response',
+          [
+            `Result: ${res.Result}`,
+            `OtpTransaction: ${res.OtpTransaction}`,
+            `Mobile: ${res.Mobile}`,
+            `ResponseDateTime: ${res.ResponseDateTime}`,
+          ].join('\n'),
+          [
+            {
+              text: 'Continue',
+              onPress: () => goToOtpScreen(mobile, res.OtpTransaction),
+            },
+          ],
+        );
+      } else {
+        goToOtpScreen(mobile, res.OtpTransaction);
+      }
     } catch (err) {
       const message = isAuthApiError(err)
         ? err.message

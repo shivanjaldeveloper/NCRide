@@ -22,6 +22,7 @@ import { checkFullLocationStatus } from '../../utils/location';
 import {
   verifyOtp,
   resendOtp,
+  verifyCookie,
   AuthApiError,
   isAuthApiError,
 } from '../../services/authApi';
@@ -155,21 +156,45 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
     try {
       const res = await verifyOtp(otpTransaction, otpString);
 
-      // Persist the session (cookie/username/name) returned by the server.
+      // Per the auth flow: a successful VerifyOtp is followed by a
+      // VerifyCookie call, which is the authoritative source for whether
+      // this account has a completed profile (Name + Email) — VerifyOtp's
+      // own Name field is not relied on for that decision.
+      let cookieRes;
       try {
-        await setSession(res.Cookie, res.Username, res.Name);
+        cookieRes = await verifyCookie(res.Cookie);
+      } catch (e) {
+        throw new Error(
+          `[step:verifyCookie] ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+
+      // Persist the session (cookie/username/name/email) — always from the
+      // VerifyCookie response, since the server may rotate the cookie on
+      // every check.
+      try {
+        await setSession(
+          cookieRes.Cookie,
+          cookieRes.Username,
+          cookieRes.Name,
+          cookieRes.Email,
+        );
       } catch (e) {
         throw new Error(
           `[step:setSession] ${e instanceof Error ? e.message : String(e)}`,
         );
       }
 
-      if (!res.Name || res.Name.trim().length === 0) {
-        // Empty Name on file -> brand-new user, collect basic details
-        // before letting them into the app.
+      const hasName = !!cookieRes.Name && cookieRes.Name.trim().length > 0;
+      const hasEmail = !!cookieRes.Email && cookieRes.Email.trim().length > 0;
+
+      if (!hasName || !hasEmail) {
+        // Missing Name and/or Email on file -> brand-new/incomplete
+        // profile, collect basic details before letting them into the app.
         navigation.replace('Registration', {
           phone,
-          username: res.Username,
+          username: cookieRes.Username,
+          cookie: cookieRes.Cookie,
         });
         return;
       }

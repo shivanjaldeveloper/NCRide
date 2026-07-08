@@ -15,8 +15,13 @@ import { ScreenShell } from '../../components/layout';
 import { NCButton, Icon } from '../../components/common';
 import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
-import { setLoggedIn, setName } from '../../utils/auth';
+import { setLoggedIn, setSession } from '../../utils/auth';
 import { checkFullLocationStatus } from '../../utils/location';
+import {
+  updateUserProfile,
+  verifyCookie,
+  isAuthApiError,
+} from '../../services/authApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Registration'>;
 
@@ -24,24 +29,38 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const RegistrationScreen = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
-  const { phone } = route.params;
+  const { phone, cookie } = route.params;
 
   const [name, setNameField] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
   const isValid =
-    name.trim().length >= 2 && (email.trim().length === 0 || EMAIL_RE.test(email.trim()));
+    name.trim().length >= 2 &&
+    email.trim().length > 0 &&
+    EMAIL_RE.test(email.trim());
 
   const handleContinue = async () => {
     if (!isValid || loading) return;
     setLoading(true);
     try {
-      // NOTE: no "create/update profile" endpoint was provided alongside
-      // VerifyNumber/VerifyOtp, so basic details are cached locally for now.
-      // Once a registration API is available, call it here (with `phone`,
-      // `name.trim()`, `email.trim()`) before persisting locally.
-      await setName(name.trim());
+      const trimmedName = name.trim();
+      const trimmedEmail = email.trim();
+
+      // Step: API: UpdateProfile
+      await updateUserProfile(cookie, trimmedName, trimmedEmail);
+
+      // Step: API: VerifyCookie (re-check right after updating, per the
+      // auth flow diagram) — also picks up any rotated cookie and confirms
+      // the update actually stuck server-side before we treat it as done.
+      const cookieRes = await verifyCookie(cookie);
+
+      await setSession(
+        cookieRes.Cookie,
+        cookieRes.Username,
+        cookieRes.Name || trimmedName,
+        cookieRes.Email || trimmedEmail,
+      );
       await setLoggedIn();
 
       const locStatus = await checkFullLocationStatus();
@@ -51,10 +70,10 @@ const RegistrationScreen = ({ navigation, route }: Props) => {
         navigation.replace('LocationPermission');
       }
     } catch (err) {
-      Alert.alert(
-        'Something went wrong',
-        'We could not save your details. Please try again.',
-      );
+      const message = isAuthApiError(err)
+        ? err.message
+        : 'We could not save your details. Please try again.';
+      Alert.alert('Something went wrong', message);
     } finally {
       setLoading(false);
     }
@@ -103,7 +122,10 @@ const RegistrationScreen = ({ navigation, route }: Props) => {
           />
 
           <Text style={styles.inputLabel}>{t.registration.mobileLabel}</Text>
-          <TouchableOpacity style={[styles.input, styles.inputDisabled]} disabled>
+          <TouchableOpacity
+            style={[styles.input, styles.inputDisabled]}
+            disabled
+          >
             <Text style={styles.mobileText}>+91 {phone}</Text>
           </TouchableOpacity>
 

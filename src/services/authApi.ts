@@ -1,26 +1,19 @@
 // Thin client around the `auth.asmx` customer endpoints.
 //
-//   POST /apiv1/customer/auth.asmx/VerifyNumber   -> sends the OTP, returns an OtpTransaction id
-//   POST /apiv1/customer/auth.asmx/VerifyOtp      -> verifies the OTP against that transaction id
-//   POST /apiv1/customer/auth.asmx/ReSendOtp      -> resends the OTP for an existing transaction, returns a NEW OtpTransaction id
-//   POST /apiv1/customer/auth.asmx/VerifyCookie   -> validates a stored session cookie, returns a (possibly rotated) Cookie/Username/Name
+//   POST /apiv1/customer/auth.asmx/VerifyNumber      -> sends the OTP, returns an OtpTransaction id
+//   POST /apiv1/customer/auth.asmx/VerifyOtp         -> verifies the OTP against that transaction id
+//   POST /apiv1/customer/auth.asmx/ReSendOtp         -> resends the OTP for an existing transaction, returns a NEW OtpTransaction id
+//   POST /apiv1/customer/auth.asmx/VerifyCookie      -> validates a stored session cookie, returns a (possibly rotated) Cookie/Username/Name(/Email)
+//   POST /apiv1/customer/auth.asmx/UserProfileUpdate -> sets name+email on a validated cookie (Complete Profile screen)
 //
-// The 4 endpoints above take PLAIN `application/x-www-form-urlencoded`
-// bodies and are protected by a static bearer token (this is an app-level
-// key, not a per-user session token — the per-user session is the `Cookie`
-// value returned by VerifyOtp, which we store locally after login). They're
-// confirmed working against the live server — left untouched here.
+// All of the above take PLAIN `application/x-www-form-urlencoded` bodies
+// and are protected by a static bearer token (this is an app-level key, not
+// a per-user session token — the per-user session is the `Cookie` value
+// returned by VerifyOtp/VerifyCookie, which we store locally after login).
+// Confirmed working against the live server — left as plain `post()`.
 //
-// Everything from ReSendOtp/VerifyCookie onward is future/new endpoints
-// only: use `postEncrypted` (below `post`) for those. It's built to
-// encrypt every outgoing form value / decrypt every incoming JSON string
-// leaf via utils/crypto.ts's AES+base58 scheme — BUT that's gated behind
-// crypto.ts's `ENCRYPTION_ENABLED` flag, currently false because there's no
-// real key yet. While false, postEncrypted sends/receives data completely
-// untouched (identical to plain `post()`), so it's safe to start wiring new
-// endpoints through it today. Once the real key shows up: drop it into
-// crypto.ts's SHARED_SECRET and flip ENCRYPTION_ENABLED to true in the same
-// change — encryption turns on with no other code changes needed here.
+// `postEncrypted` further below is for FUTURE endpoints only, once a real
+// encryption key exists — none of the above use it.
 
 import { encrypt, decryptJson, ENCRYPTION_ENABLED } from '../utils/crypto';
 
@@ -82,8 +75,25 @@ export interface VerifyCookieResponse {
   Cookie: string;
   Username: string;
   Name: string;
+  // ASSUMPTION: the sample response we were given for VerifyCookie didn't
+  // include an Email field, but the app flow requires checking Name+Email
+  // together (see Splash/OTPVerify) — kept optional/tolerant so this
+  // doesn't break if the field is genuinely absent. Confirm against a real
+  // response once available and tighten this if needed.
+  Email?: string;
   ResponseDateTime: string;
   Message?: string;
+}
+
+export interface UserProfileUpdateResponse {
+  Result: ApiResult;
+  // "Profile Updated Successfully" on success — informational only.
+  Message?: string;
+  ResponseDateTime: string;
+  // CONFIRMED: this endpoint does NOT echo back Cookie/Username/Name/Email
+  // — callers should follow up with a VerifyCookie call to get the
+  // authoritative post-update values (RegistrationScreen already does
+  // this).
 }
 
 class AuthApiError extends Error {
@@ -351,5 +361,17 @@ export const resendOtp = (otpTransaction: string): Promise<ReSendOtpResponse> =>
  */
 export const verifyCookie = (cookie: string): Promise<VerifyCookieResponse> =>
   post<VerifyCookieResponse>('VerifyCookie', { cookie });
+
+/**
+ * Complete/update the user's profile (name + email) against a validated
+ * session cookie. Used by the "Complete Profile" screen right after a
+ * VerifyCookie check comes back with Name/Email missing.
+ */
+export const updateUserProfile = (
+  cookie: string,
+  name: string,
+  email: string,
+): Promise<UserProfileUpdateResponse> =>
+  post<UserProfileUpdateResponse>('UserProfileUpdate', { cookie, name, email });
 
 export { AuthApiError };

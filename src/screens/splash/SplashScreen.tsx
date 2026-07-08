@@ -23,10 +23,10 @@ import type { RootStackParamList } from '../../navigation/types';
 import { Colors, fscale } from '../../theme';
 import { getPersistedLocale } from '../../i18n';
 import {
-  isLoggedIn,
   getSessionCookie,
   setSession,
   clearAuth,
+  hasEverLoggedIn,
 } from '../../utils/auth';
 import { checkFullLocationStatus } from '../../utils/location';
 import { verifyCookie, isAuthApiError } from '../../services/authApi';
@@ -82,63 +82,86 @@ const SplashScreen = ({ navigation }: Props) => {
 
     const timer = setTimeout(async () => {
       try {
-        const loggedIn = await isLoggedIn();
+        // Per the app's auth flow diagram: Splash checks for a LOCAL
+        // COOKIE ONLY (not a separate "logged in" flag) — its mere
+        // presence is what decides whether we even attempt VerifyCookie.
+        const cookie = await getSessionCookie();
 
-        if (loggedIn) {
-          const cookie = await getSessionCookie();
-          let sessionStillValid = false;
-
-          if (cookie) {
-            try {
-              const res = await verifyCookie(cookie);
-              // Server may rotate the cookie on every check — always
-              // re-persist whatever comes back rather than assuming the
-              // cookie we sent is still the current one ("save user").
-              await setSession(res.Cookie, res.Username, res.Name);
-              sessionStillValid = true;
-            } catch (err) {
-              // Distinguish "server explicitly rejected this cookie"
-              // (responseStatus present -> real Result:Error response)
-              // from "couldn't reach the server at all" (no
-              // responseStatus -> plain network failure). Only log the
-              // user out on the former — on a network hiccup we fail
-              // open and let them in with the cached session rather than
-              // booting a user with no connectivity.
-              if (isAuthApiError(err) && err.responseStatus != null) {
-                await clearAuth();
-                sessionStillValid = false;
-              } else {
-                sessionStillValid = true;
-              }
+        if (!cookie) {
+          // No cookie -> could be a genuinely first-ever launch, OR a
+          // returning/registered user who logged out (or whose session
+          // expired) — only the former should see onboarding.
+          const everLoggedIn = await hasEverLoggedIn();
+          if (everLoggedIn) {
+            navigation.replace('OTPLogin');
+          } else {
+            const savedLocale = await getPersistedLocale();
+            if (savedLocale) {
+              navigation.replace('Onboarding');
+            } else {
+              navigation.replace('LanguageSelect');
             }
           }
+          return;
+        }
 
-          if (sessionStillValid) {
-            // Returning user — check if location is ready
+        try {
+          const cookieRes = await verifyCookie(cookie);
+
+          // Server may rotate the cookie on every check — always
+          // re-persist whatever comes back rather than assuming the
+          // cookie we sent is still the current one ("save user").
+          await setSession(
+            cookieRes.Cookie,
+            cookieRes.Username,
+            cookieRes.Name,
+            cookieRes.Email,
+          );
+
+          const hasName = !!cookieRes.Name && cookieRes.Name.trim().length > 0;
+          const hasEmail =
+            !!cookieRes.Email && cookieRes.Email.trim().length > 0;
+
+          if (!hasName || !hasEmail) {
+            // Valid cookie, but profile incomplete -> Complete Profile.
+            navigation.replace('Registration', {
+              phone: cookieRes.Username,
+              username: cookieRes.Username,
+              cookie: cookieRes.Cookie,
+            });
+            return;
+          }
+
+          // Valid cookie + complete profile -> Home (still gated on
+          // location permission/services being ready, as before).
+          const locStatus = await checkFullLocationStatus();
+          if (locStatus.allGood) {
+            navigation.replace('HomeTabs');
+          } else {
+            navigation.replace('LocationPermission');
+          }
+        } catch (err) {
+          // Distinguish "server explicitly rejected this cookie"
+          // (responseStatus present -> real Result:Error response) from
+          // "couldn't reach the server at all" (no responseStatus ->
+          // plain network failure). Only log out on the former — on a
+          // network hiccup we fail open with the cached session rather
+          // than booting a user with no connectivity.
+          if (isAuthApiError(err) && err.responseStatus != null) {
+            await clearAuth();
+            navigation.replace('OTPLogin');
+          } else {
             const locStatus = await checkFullLocationStatus();
             if (locStatus.allGood) {
               navigation.replace('HomeTabs');
             } else {
-              // Permission or services not ready — send to permission screen
               navigation.replace('LocationPermission');
             }
-          } else {
-            // Cookie explicitly rejected (or never existed) — session is
-            // gone, send back through login rather than full onboarding.
-            navigation.replace('OTPLogin');
-          }
-        } else {
-          // New/logged-out user — start the onboarding flow
-          const savedLocale = await getPersistedLocale();
-          if (savedLocale) {
-            navigation.replace('Onboarding');
-          } else {
-            navigation.replace('LanguageSelect');
           }
         }
       } catch {
         // Fallback: start fresh
-        navigation.replace('LanguageSelect');
+        navigation.replace('OTPLogin');
       }
     }, SPLASH_DURATION_MS);
 
