@@ -20,8 +20,8 @@ import { useTranslation } from '../../i18n';
 import { setLoggedIn, setSession } from '../../utils/auth';
 import { checkFullLocationStatus } from '../../utils/location';
 import {
-  verifyNumber,
   verifyOtp,
+  resendOtp,
   AuthApiError,
   isAuthApiError,
 } from '../../services/authApi';
@@ -226,7 +226,9 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
     if (countdown > 0 || resending) return;
     setResending(true);
     try {
-      const res = await verifyNumber(phone);
+      // Resend against the CURRENT transaction — the server issues a new
+      // one in response, which invalidates the old one for VerifyOtp.
+      const res = await resendOtp(otpTransaction);
       setOtpTransaction(res.OtpTransaction);
       setOtp(Array(OTP_LENGTH).fill(''));
       setCountdown(RESEND_SECONDS);
