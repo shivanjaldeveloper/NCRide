@@ -20,6 +20,7 @@ import { checkFullLocationStatus } from '../../utils/location';
 import {
   updateUserProfile,
   verifyCookie,
+  userRefUpdate,
   isAuthApiError,
 } from '../../services/authApi';
 
@@ -33,12 +34,24 @@ const RegistrationScreen = ({ navigation, route }: Props) => {
 
   const [name, setNameField] = useState('');
   const [email, setEmail] = useState('');
+  const [referral, setReferral] = useState('');
   const [loading, setLoading] = useState(false);
 
   const isValid =
     name.trim().length >= 2 &&
     email.trim().length > 0 &&
     EMAIL_RE.test(email.trim());
+
+  // Referral is entirely optional — never part of `isValid`, and a failure
+  // applying it should never block the account from being created.
+  const proceedToNext = async () => {
+    const locStatus = await checkFullLocationStatus();
+    if (locStatus.allGood) {
+      navigation.replace('HomeTabs');
+    } else {
+      navigation.replace('LocationPermission');
+    }
+  };
 
   const handleContinue = async () => {
     if (!isValid || loading) return;
@@ -63,11 +76,29 @@ const RegistrationScreen = ({ navigation, route }: Props) => {
       );
       await setLoggedIn();
 
-      const locStatus = await checkFullLocationStatus();
-      if (locStatus.allGood) {
-        navigation.replace('HomeTabs');
-      } else {
-        navigation.replace('LocationPermission');
+      const trimmedReferral = referral.trim();
+      if (!trimmedReferral) {
+        await proceedToNext();
+        return;
+      }
+
+      // Step: API: UserRefUpdate (optional) — attach the referral code
+      // against the freshest cookie (may have rotated in VerifyCookie
+      // above). Best-effort: the account is already fully created at this
+      // point, so a failure here should never block Home — just tell the
+      // person and let them continue.
+      try {
+        await userRefUpdate(cookieRes.Cookie, trimmedReferral);
+        await proceedToNext();
+      } catch (referErr) {
+        const referMessage = isAuthApiError(referErr)
+          ? referErr.message
+          : 'Could not apply the referral code.';
+        Alert.alert(
+          'Referral code not applied',
+          `${referMessage} You can add it later from Refer & Earn in your account.`,
+          [{ text: 'OK', onPress: () => proceedToNext() }],
+        );
       }
     } catch (err) {
       const message = isAuthApiError(err)
@@ -128,6 +159,20 @@ const RegistrationScreen = ({ navigation, route }: Props) => {
           >
             <Text style={styles.mobileText}>+91 {phone}</Text>
           </TouchableOpacity>
+
+          <Text style={styles.inputLabel}>{t.registration.referralLabel}</Text>
+          <TextInput
+            style={styles.input}
+            value={referral}
+            onChangeText={setReferral}
+            placeholder={t.registration.referralPlaceholder}
+            placeholderTextColor={Colors.textTertiary}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            maxLength={20}
+            returnKeyType="done"
+          />
+          <Text style={styles.helper}>{t.registration.referralHelper}</Text>
 
           <Text style={styles.helper}>{t.registration.helper}</Text>
 

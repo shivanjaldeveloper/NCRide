@@ -18,11 +18,10 @@ import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
 import { verifyNumber, isAuthApiError } from '../../services/authApi';
 
-// TEMP: shows the full API response (OtpTransaction, Mobile, etc.) in an
-// Alert before navigating on, so it can be read/screenshotted without
-// logcat/Metro access. Turn this off (set to false) once the integration
-// is confirmed stable.
-const SHOW_DEBUG_LOG = true;
+// Integration confirmed stable against the live server — no longer
+// interrupting the flow with a debug Alert before navigating on. Flip back
+// to true only if you need to re-inspect the raw VerifyNumber response.
+const SHOW_DEBUG_LOG = false;
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OTPLogin'>;
 

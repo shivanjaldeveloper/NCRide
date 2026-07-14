@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useCallback, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import type {
   HomeTabParamList,
   RootStackParamList,
@@ -12,11 +13,23 @@ import { NCCard, Icon, Row } from '../../components/common';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
 import { LANGUAGE_OPTIONS } from '../../i18n/translations';
+import { getName, getEmail, getUsername } from '../../utils/auth';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<HomeTabParamList, 'Account'>,
   NativeStackScreenProps<RootStackParamList>
 >;
+
+// Builds the 1-2 letter avatar initials from the logged-in user's name
+// (e.g. "Priyankar Bhomwik" -> "PB", "Priyankar" -> "P"). Falls back to a
+// generic mark if no name is on file yet (shouldn't normally happen post
+// -Registration, but Account can theoretically be reached mid-session).
+const getInitials = (name: string): string => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '—';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 const AccountScreen = ({ navigation }: Props) => {
   const { t, locale } = useTranslation();
@@ -25,6 +38,40 @@ const AccountScreen = ({ navigation }: Props) => {
 
   const currentLangLabel =
     LANGUAGE_OPTIONS.find(o => o.locale === locale)?.nativeLabel ?? 'English';
+
+  // Session values (Name/Email/Username) are persisted by setSession() right
+  // after VerifyOtp/VerifyCookie/UpdateProfile — read from local storage
+  // here rather than duplicating them via navigation params, since this
+  // screen can be reached from anywhere in HomeTabs. Re-read on every focus
+  // so a profile edit elsewhere shows up without needing a full relaunch.
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [mobile, setMobile] = useState('');
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        const [n, e, u] = await Promise.all([
+          getName(),
+          getEmail(),
+          getUsername(),
+        ]);
+        if (cancelled) return;
+        setName(n ?? '');
+        setEmail(e ?? '');
+        setMobile(u ?? '');
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
+  const displayName = name || 'Your account';
+  const contactLine = [mobile ? `+91 ${mobile}` : null, email || null]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <View style={styles.root}>
@@ -42,13 +89,11 @@ const AccountScreen = ({ navigation }: Props) => {
         <NCCard pad={16} style={styles.profileCard}>
           <View style={styles.profileRow}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>AR</Text>
+              <Text style={styles.avatarText}>{getInitials(displayName)}</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.name}>Arya Sengupta</Text>
-              <Text style={styles.contact}>
-                +91 98300 12428 · arya@ncrride.com
-              </Text>
+              <Text style={styles.name}>{displayName}</Text>
+              <Text style={styles.contact}>{contactLine}</Text>
               <View style={styles.tierBadge}>
                 <Icon name="reward" size={12} stroke={Colors.lime} />
                 <Text style={styles.tierText}>{t.account.tierLabel}</Text>

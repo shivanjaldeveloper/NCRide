@@ -53,6 +53,11 @@ export interface VerifyOtpResponse {
   // Empty string ('') means this mobile number has no name on file yet ->
   // treat as a brand-new user and route to registration.
   Name: string;
+  // CONFIRMED present on live responses alongside Name. Still optional
+  // here since callers (OTPVerifyScreen) always follow this up with a
+  // VerifyCookie call as the authoritative source and don't read this
+  // field directly — kept tolerant in case a legacy/edge response omits it.
+  Email?: string;
   ResponseDateTime: string;
   Message?: string;
 }
@@ -75,11 +80,11 @@ export interface VerifyCookieResponse {
   Cookie: string;
   Username: string;
   Name: string;
-  // ASSUMPTION: the sample response we were given for VerifyCookie didn't
-  // include an Email field, but the app flow requires checking Name+Email
-  // together (see Splash/OTPVerify) — kept optional/tolerant so this
-  // doesn't break if the field is genuinely absent. Confirm against a real
-  // response once available and tighten this if needed.
+  // CONFIRMED present on live VerifyCookie responses. Kept optional/
+  // tolerant rather than required so a legacy/incomplete-profile account
+  // (empty string, or genuinely absent) doesn't break the response shape —
+  // Splash/OTPVerify/Registration all treat a missing-or-empty value the
+  // same way (route to Registration to complete the profile).
   Email?: string;
   ResponseDateTime: string;
   Message?: string;
@@ -94,6 +99,15 @@ export interface UserProfileUpdateResponse {
   // — callers should follow up with a VerifyCookie call to get the
   // authoritative post-update values (RegistrationScreen already does
   // this).
+}
+
+export interface UserRefUpdateResponse {
+  Result: ApiResult;
+  // "Refer Updated Successfully" on success — informational only.
+  Message?: string;
+  ResponseDateTime: string;
+  // CONFIRMED: same shape as UserProfileUpdate — no Cookie/Username echoed
+  // back, so there's nothing to re-persist locally after this call.
 }
 
 class AuthApiError extends Error {
@@ -336,12 +350,18 @@ export const verifyNumber = (mobile: string): Promise<VerifyNumberResponse> =>
  * On success returns a `Cookie` (session token) + `Username` + `Name`.
  * `Name` is empty for a brand-new user — the caller should route to the
  * registration screen in that case.
+ *
+ * UI-vs-backend digit mismatch: OTPVerifyScreen only collects 4 digits from
+ * the user, but this backend still expects a 6-digit OTP — '56' is
+ * appended here as a fixed suffix before the request goes out, so the
+ * screen (and any other caller) only ever has to deal with the 4 digits
+ * the user actually typed.
  */
 export const verifyOtp = (
   otpTransaction: string,
   otp: string,
 ): Promise<VerifyOtpResponse> =>
-  post<VerifyOtpResponse>('VerifyOtp', { otpTransaction, otp });
+  post<VerifyOtpResponse>('VerifyOtp', { otpTransaction, otp: `${otp}56` });
 
 /**
  * Resend the OTP for an in-progress login. Takes the CURRENT otpTransaction
@@ -373,5 +393,18 @@ export const updateUserProfile = (
   email: string,
 ): Promise<UserProfileUpdateResponse> =>
   post<UserProfileUpdateResponse>('UserProfileUpdate', { cookie, name, email });
+
+/**
+ * Attach a referral code to the account (Complete Profile screen, optional
+ * field). Takes a validated session cookie + the referral code the new
+ * user was given. Best-effort: callers should treat a failure here as
+ * non-fatal to the signup flow (the account/profile is already created by
+ * this point) — surface it as a soft warning rather than blocking Home.
+ */
+export const userRefUpdate = (
+  cookie: string,
+  refer: string,
+): Promise<UserRefUpdateResponse> =>
+  post<UserRefUpdateResponse>('UserRefUpdate', { cookie, refer });
 
 export { AuthApiError };

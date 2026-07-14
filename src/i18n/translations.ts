@@ -47,7 +47,7 @@ const en = {
     welcome: 'Welcome.\nSign in to Alo Alo',
     welcomeSub: "We'll send a 6-digit OTP to verify your number.",
     mobileNumber: 'MOBILE NUMBER',
-    phonePlaceholder: '98300 12428',
+    phonePlaceholder: '9830012428',
     privacyNote: 'Your number is encrypted and never shared with drivers.',
     sendOtp: 'Send OTP',
     legalPrefix: 'By continuing you agree to our ',
@@ -71,6 +71,10 @@ const en = {
     emailLabel: 'EMAIL (OPTIONAL)',
     emailPlaceholder: 'you@example.com',
     mobileLabel: 'MOBILE NUMBER',
+    referralLabel: 'REFERRAL CODE (OPTIONAL)',
+    referralPlaceholder: 'Enter code, if you have one',
+    referralHelper:
+      'Have a friend\u2019s referral code? Add it here to unlock rewards for both of you.',
     helper: "We'll use this to send trip receipts and important updates.",
     continueBtn: 'Continue',
   },
@@ -455,7 +459,7 @@ const hi: TranslationKeys = {
     welcome: 'स्वागत है।\nAlo Alo में साइन इन करें',
     welcomeSub: 'हम आपके नंबर को सत्यापित करने के लिए 6-अंकीय OTP भेजेंगे।',
     mobileNumber: 'मोबाइल नंबर',
-    phonePlaceholder: '98300 12428',
+    phonePlaceholder: '9830012428',
     privacyNote:
       'आपका नंबर एन्क्रिप्टेड है और कभी ड्राइवरों के साथ साझा नहीं किया जाता।',
     sendOtp: 'OTP भेजें',
@@ -480,6 +484,10 @@ const hi: TranslationKeys = {
     emailLabel: 'ईमेल (वैकल्पिक)',
     emailPlaceholder: 'you@example.com',
     mobileLabel: 'मोबाइल नंबर',
+    referralLabel: 'रेफ़रल कोड (वैकल्पिक)',
+    referralPlaceholder: 'अगर आपके पास है तो कोड डालें',
+    referralHelper:
+      'किसी दोस्त का रेफ़रल कोड है? दोनों के लिए रिवॉर्ड पाने हेतु यहाँ डालें।',
     helper: 'हम इसका उपयोग ट्रिप रसीदें और ज़रूरी जानकारी भेजने के लिए करेंगे।',
     continueBtn: 'जारी रखें',
   },
@@ -861,7 +869,7 @@ const mr: TranslationKeys = {
     welcome: 'स्वागत आहे।\nAlo Alo मध्ये साइन इन करा',
     welcomeSub: 'आम्ही तुमचा नंबर पडताळण्यासाठी 6-अंकी OTP पाठवू.',
     mobileNumber: 'मोबाइल नंबर',
-    phonePlaceholder: '98300 12428',
+    phonePlaceholder: '9830012428',
     privacyNote:
       'तुमचा नंबर एन्क्रिप्टेड आहे आणि कधीही ड्रायव्हरांसोबत शेअर केला जात नाही.',
     sendOtp: 'OTP पाठवा',
@@ -886,7 +894,12 @@ const mr: TranslationKeys = {
     emailLabel: 'ईमेल (ऐच्छिक)',
     emailPlaceholder: 'you@example.com',
     mobileLabel: 'मोबाइल नंबर',
-    helper: 'ट्रिप पावत्या आणि महत्त्वाचे अपडेट पाठवण्यासाठी आम्ही याचा वापर करू.',
+    referralLabel: 'रेफरल कोड (ऐच्छिक)',
+    referralPlaceholder: 'तुमच्याकडे असल्यास कोड टाका',
+    referralHelper:
+      'मित्राचा रेफरल कोड आहे का? दोघांनाही रिवॉर्ड मिळवण्यासाठी इथे टाका.',
+    helper:
+      'ट्रिप पावत्या आणि महत्त्वाचे अपडेट पाठवण्यासाठी आम्ही याचा वापर करू.',
     continueBtn: 'पुढे चला',
   },
   permission: {

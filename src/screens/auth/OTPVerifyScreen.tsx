@@ -29,22 +29,25 @@ import {
 
 type Props = NativeStackScreenProps<RootStackParamList, 'OTPVerify'>;
 
-const OTP_LENGTH = 6;
+const OTP_LENGTH = 4;
 const RESEND_SECONDS = 42;
 
 // TEMP: backend currently accepts a fixed test OTP regardless of what was
-// actually sent to the phone. We no longer auto-fill the boxes (so the
-// normal typing/validation flow gets exercised), but we still show a hint
-// so testers know what to type. Set SHOW_TEST_OTP_HINT to false once the
-// backend sends real, per-request OTPs via SMS.
-const TEST_OTP = '123456';
+// actually sent to the phone. The backend's accepted value is still the
+// full 6-digit '123456' — since verifyOtp() now appends a fixed '56' suffix
+// to whatever 4 digits the user types (see services/authApi.ts), typing
+// '1234' here is what actually produces '123456' on the wire. We no longer
+// auto-fill the boxes (so the normal typing/validation flow gets
+// exercised), but we still show a hint so testers know what to type. Set
+// SHOW_TEST_OTP_HINT to false once the backend sends real, per-request OTPs
+// via SMS.
+const TEST_OTP = '1234';
 const SHOW_TEST_OTP_HINT = true;
 
-// TEMP: shows the exact request/response (or thrown error) on a failed
-// verify, regardless of __DEV__ — turn this off once the live API
-// integration is confirmed stable, since it'll otherwise leak backend
-// response shapes to end users on a release build.
-const SHOW_VERBOSE_ERRORS = true;
+// Integration confirmed stable end-to-end — verbose request/response
+// dumps are now gated to __DEV__ only, so a release build shows just the
+// clean error message instead of leaking backend response shapes.
+const SHOW_VERBOSE_ERRORS = __DEV__;
 
 const OTPVerifyScreen = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
