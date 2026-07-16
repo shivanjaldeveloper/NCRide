@@ -19,6 +19,7 @@ import {
   Onb3Illustration,
 } from './OnboardingIllustrations';
 import { useTranslation } from '../../i18n';
+import { setHasSeenOnboarding } from '../../utils/auth';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Onboarding'>;
 
@@ -32,18 +33,34 @@ const OnboardingScreen = ({ navigation }: Props) => {
   const isLast = activeIndex === SLIDES.length - 1;
 
   const handleNext = () => {
-    if (isLast) { navigation.replace('OTPLogin'); return; }
-    flatListRef.current?.scrollToIndex({ index: activeIndex + 1, animated: true });
+    if (isLast) {
+      setHasSeenOnboarding();
+      navigation.replace('OTPLogin');
+      return;
+    }
+    flatListRef.current?.scrollToIndex({
+      index: activeIndex + 1,
+      animated: true,
+    });
   };
 
-  const handleSkip = () => navigation.replace('OTPLogin');
+  const handleSkip = () => {
+    setHasSeenOnboarding();
+    navigation.replace('OTPLogin');
+  };
 
   const onMomentumEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN.width);
     setActiveIndex(index);
   };
 
-  const renderSlide = ({ item, index }: { item: (typeof SLIDES)[0]; index: number }) => {
+  const renderSlide = ({
+    item,
+    index,
+  }: {
+    item: (typeof SLIDES)[0];
+    index: number;
+  }) => {
     const Illustration = ILLUSTRATIONS[index];
     return (
       <View style={[styles.slide, { width: SCREEN.width }]}>
@@ -63,7 +80,11 @@ const OnboardingScreen = ({ navigation }: Props) => {
       topColor={Colors.bgOffWhite}
       bottomColor={Colors.bgOffWhite}
     >
-      <TouchableOpacity style={styles.skipBtn} onPress={handleSkip} activeOpacity={0.7}>
+      <TouchableOpacity
+        style={styles.skipBtn}
+        onPress={handleSkip}
+        activeOpacity={0.7}
+      >
         <Text style={styles.skipText}>{t.common.skip}</Text>
       </TouchableOpacity>
 
@@ -83,7 +104,10 @@ const OnboardingScreen = ({ navigation }: Props) => {
       <View style={styles.bottomBar}>
         <View style={styles.dots}>
           {SLIDES.map((_, i) => (
-            <View key={i} style={[styles.dot, i === activeIndex && styles.dotActive]} />
+            <View
+              key={i}
+              style={[styles.dot, i === activeIndex && styles.dotActive]}
+            />
           ))}
         </View>
         <NCButton
@@ -161,7 +185,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   dots: { flexDirection: 'row', gap: 6 },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(15,17,21,0.18)' },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(15,17,21,0.18)',
+  },
   dotActive: { width: 24, backgroundColor: Colors.ink },
   nextBtn: { paddingHorizontal: fscale(24) },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Linking,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
@@ -17,6 +18,8 @@ import { NCButton, Icon } from '../../components/common';
 import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
 import { verifyNumber, isAuthApiError } from '../../services/authApi';
+import { acceptTerms, hasAcceptedCurrentTerms } from '../../utils/terms';
+import { TERMS_URL, PRIVACY_URL } from '../../constants/legal';
 
 // Integration confirmed stable against the live server — no longer
 // interrupting the flow with a debug Alert before navigating on. Flip back
@@ -29,7 +32,29 @@ const OTPLoginScreen = ({ navigation }: Props) => {
   const { t } = useTranslation();
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
-  const isValid = phone.replace(/\s/g, '').length === 10;
+  // Defaults to false (unchecked) so a brand-new device always requires an
+  // explicit tap before Send OTP is enabled. Pre-filled to true on mount
+  // ONLY if this device already accepted the CURRENT terms version before
+  // (e.g. re-login after logout) — avoids re-annoying a returning user
+  // while still requiring a fresh tap after a real terms-version bump,
+  // since hasAcceptedCurrentTerms() returns false in that case.
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const isPhoneValid = phone.replace(/\s/g, '').length === 10;
+  const isValid = isPhoneValid && termsAccepted;
+
+  useEffect(() => {
+    hasAcceptedCurrentTerms().then(setTermsAccepted);
+  }, []);
+
+  const toggleTerms = () => {
+    const next = !termsAccepted;
+    setTermsAccepted(next);
+    // Persist immediately on check (not just on Send OTP) — no session
+    // cookie exists yet at this point, so this writes the LOCAL record
+    // only; acceptTerms() is called again with a cookie right after
+    // login/registration completes to (eventually) sync it remotely too.
+    if (next) acceptTerms();
+  };
 
   const goToOtpScreen = (mobile: string, otpTransaction: string) => {
     navigation.navigate('OTPVerify', { phone: mobile, otpTransaction });
@@ -121,27 +146,50 @@ const OTPLoginScreen = ({ navigation }: Props) => {
             <Text style={styles.privacyText}>{t.auth.privacyNote}</Text>
           </View>
 
-          <View style={{ flex: 1 }} />
-
-          <NCButton
-            label={t.auth.sendOtp}
-            iconRight="arrowRight"
-            onPress={handleSend}
-            loading={loading}
-            disabled={!isValid}
-            variant="primary"
-            size="lg"
-          />
-
-          <Text style={styles.legal}>
-            {t.auth.legalPrefix}
-            <Text style={styles.legalLink}>{t.auth.terms}</Text>
-            {t.auth.legalMid}
-            <Text style={styles.legalLink}>{t.auth.privacy}</Text>
-            {t.auth.legalSuffix}
-          </Text>
+          <TouchableOpacity
+            style={styles.termsRow}
+            onPress={toggleTerms}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.checkbox, termsAccepted && styles.checkboxOn]}>
+              {termsAccepted && (
+                <Icon name="check" size={13} stroke="#fff" sw={3} />
+              )}
+            </View>
+            <Text style={styles.termsText}>
+              {t.auth.legalPrefix}
+              <Text
+                style={styles.legalLink}
+                onPress={() => Linking.openURL(TERMS_URL)}
+              >
+                {t.auth.terms}
+              </Text>
+              {t.auth.legalMid}
+              <Text
+                style={styles.legalLink}
+                onPress={() => Linking.openURL(PRIVACY_URL)}
+              >
+                {t.auth.privacy}
+              </Text>
+              {t.auth.legalSuffix}
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Outside KeyboardAvoidingView on purpose — stays pinned to the
+          screen bottom and never gets pushed up when the keyboard opens. */}
+      <View style={styles.bottomBar}>
+        <NCButton
+          label={t.auth.sendOtp}
+          iconRight="arrowRight"
+          onPress={handleSend}
+          loading={loading}
+          disabled={!isValid}
+          variant="primary"
+          size="lg"
+        />
+      </View>
     </ScreenShell>
   );
 };
@@ -150,7 +198,15 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: Spacing.screen,
-    paddingBottom: vscale(32),
+    paddingBottom: vscale(24),
+  },
+  bottomBar: {
+    paddingHorizontal: Spacing.screen,
+    paddingTop: vscale(12),
+    paddingBottom: vscale(20),
+    backgroundColor: Colors.bgWhite,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
   },
   backBtn: {
     width: fscale(40),
@@ -246,13 +302,34 @@ const styles = StyleSheet.create({
     // small paddingTop so first-line matras aren't cut
     paddingTop: fscale(2),
   },
-  legal: {
-    fontSize: fscale(11.5),
-    color: Colors.textTertiary,
-    textAlign: 'center',
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
     marginTop: Spacing.md,
-    // roomy lineHeight for Devanagari legal line
+  },
+  checkbox: {
+    width: fscale(20),
+    height: fscale(20),
+    borderRadius: fscale(5),
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bgWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: fscale(1),
+    flexShrink: 0,
+  },
+  checkboxOn: {
+    backgroundColor: Colors.ink,
+    borderColor: Colors.ink,
+  },
+  termsText: {
+    fontSize: fscale(12.5),
+    color: Colors.textSecondary,
     lineHeight: fscale(20),
+    flex: 1,
+    paddingTop: fscale(1),
   },
   legalLink: { color: Colors.ink, fontWeight: '600' },
 });

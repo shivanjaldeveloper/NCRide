@@ -5,6 +5,10 @@ export type RootStackParamList = {
   OTPLogin: undefined;
   OTPVerify: { phone: string; otpTransaction: string };
   Registration: { phone: string; username: string; cookie: string };
+  // Shown to an ALREADY-authenticated user (valid cookie + complete
+  // profile) when their locally-accepted terms version no longer matches
+  // constants/legal.ts's TERMS_VERSION — must accept again before Home.
+  TermsUpdate: undefined;
   LocationPermission: undefined;
   HomeTabs: undefined;
   // New: full-screen map location picker

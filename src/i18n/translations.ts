@@ -159,6 +159,9 @@ const en = {
     rewardsSub: '840 points · Sapphire',
     referEarn: 'Refer & earn',
     referEarnSub: 'Earn ₹500 per invite',
+    applyReferral: 'Have a referral code?',
+    applyReferralSub: 'Apply a friend\u2019s code for a discount',
+    applyReferralAppliedPrefix: 'Applied',
     helpSupport: 'Help & support',
     sosContacts: 'SOS contacts',
     sosContactsSub: '3 added',
@@ -410,6 +413,16 @@ const en = {
     appVersion: 'Alo Alo v 1.0.0',
     buildLabel: 'Build 2026.03.18',
   },
+  referralModal: {
+    title: 'Apply referral code',
+    sub: 'Enter a friend\u2019s referral code to unlock a discount on your next ride.',
+    placeholder: 'e.g. ARYA-N62',
+    applyBtn: 'Apply code',
+    successTitle: 'Code applied!',
+    errorInvalid:
+      'That code doesn\u2019t look right. Double-check and try again.',
+    errorSelf: 'You can\u2019t use your own referral code.',
+  },
 } as const;
 
 // ── Hindi ──────────────────────────────────────────────────────────────────
@@ -575,6 +588,9 @@ const hi: TranslationKeys = {
     rewardsSub: '840 पॉइंट · सफायर',
     referEarn: 'रेफर करें और कमाएं',
     referEarnSub: 'प्रति आमंत्रण ₹500 कमाएं',
+    applyReferral: 'क्या आपके पास रेफरल कोड है?',
+    applyReferralSub: 'छूट पाने के लिए दोस्त का कोड डालें',
+    applyReferralAppliedPrefix: 'लागू किया गया',
     helpSupport: 'सहायता और समर्थन',
     sosContacts: 'SOS संपर्क',
     sosContactsSub: '3 जोड़े गए',
@@ -820,6 +836,15 @@ const hi: TranslationKeys = {
     appVersion: 'Alo Alo v 1.0.0',
     buildLabel: 'Build 2026.03.18',
   },
+  referralModal: {
+    title: 'रेफरल कोड लागू करें',
+    sub: 'अगली राइड पर छूट पाने के लिए दोस्त का रेफरल कोड डालें।',
+    placeholder: 'जैसे ARYA-N62',
+    applyBtn: 'कोड लागू करें',
+    successTitle: 'कोड लागू हो गया!',
+    errorInvalid: 'यह कोड सही नहीं लग रहा। जांच कर दोबारा कोशिश करें।',
+    errorSelf: 'आप अपना खुद का रेफरल कोड उपयोग नहीं कर सकते।',
+  },
 };
 
 // ── Marathi ────────────────────────────────────────────────────────────────
@@ -980,6 +1005,9 @@ const mr: TranslationKeys = {
     rewardsSub: '840 पॉइंट · सफायर',
     referEarn: 'रेफर करा आणि कमवा',
     referEarnSub: 'प्रति आमंत्रणावर ₹500 कमवा',
+    applyReferral: 'तुमच्याकडे रेफरल कोड आहे का?',
+    applyReferralSub: 'सवलतीसाठी मित्राचा कोड टाका',
+    applyReferralAppliedPrefix: 'लागू केला',
     helpSupport: 'मदत आणि आधार',
     sosContacts: 'SOS संपर्क',
     sosContactsSub: '3 जोडले',
@@ -1225,6 +1253,15 @@ const mr: TranslationKeys = {
     deleteAccountSub: 'तुमचा सर्व डेटा कायमचा हटवा',
     appVersion: 'Alo Alo v 1.0.0',
     buildLabel: 'Build 2026.03.18',
+  },
+  referralModal: {
+    title: 'रेफरल कोड लागू करा',
+    sub: 'पुढील राइडवर सवलत मिळवण्यासाठी मित्राचा रेफरल कोड टाका.',
+    placeholder: 'उदा. ARYA-N62',
+    applyBtn: 'कोड लागू करा',
+    successTitle: 'कोड लागू झाला!',
+    errorInvalid: 'हा कोड बरोबर वाटत नाही. तपासून पुन्हा प्रयत्न करा.',
+    errorSelf: 'तुम्ही तुमचा स्वतःचा रेफरल कोड वापरू शकत नाही.',
   },
 };
 

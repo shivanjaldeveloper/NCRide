@@ -209,60 +209,58 @@ const HomeScreen = ({ navigation }: Props) => {
   // succession was the cause of one silently clobbering the other.
   const openPicker = (field: 'pickup' | 'drop') => {
     const point = field === 'pickup' ? pickup : drop;
-    navigation.getParent()?.navigate(
-      'LocationPicker' as never,
-      {
-        field,
-        // For a field with nothing set yet, start the map at the device's
-        // live location (or near the pickup point for TO) rather than a
-        // blank world map — still fully editable via search.
-        initialLat:
-          point?.lat ??
-          (field === 'drop'
-            ? pickup?.lat ?? liveLocation?.lat
-            : liveLocation?.lat),
-        initialLng:
-          point?.lng ??
-          (field === 'drop'
-            ? pickup?.lng ?? liveLocation?.lng
-            : liveLocation?.lng),
-        initialAddress: point?.address,
-        // Always 'manual' when reopening an existing point (even a
-        // GPS-auto-filled pickup) — this just means "don't silently
-        // reshuffle it while the user is looking at it"; it does not mean
-        // pickup can never come from GPS in the first place.
-        initialSource: point ? 'manual' : undefined,
-        onPick: (result: {
-          address: string;
-          lat: number;
-          lng: number;
-          source: 'gps' | 'manual';
-        }) => {
-          const newPoint: LocationPoint = {
-            address: result.address,
-            shortName: result.address.split(',')[0].trim(),
-            lat: result.lat,
-            lng: result.lng,
-            source: result.source,
-          };
-          if (field === 'pickup') {
-            pickupUserSetRef.current = true;
-            setPickup(newPoint);
-          } else setDrop(newPoint);
-        },
-      } as never,
-    );
+    // Cast the function itself (not the args) to sidestep a known
+    // React Navigation + optional-chaining TS quirk: `getParent()?.navigate`
+    // collapses multi-arg overloads to a `[never, never]` tuple, which then
+    // rejects any real params object passed to it.
+    (navigation.getParent()?.navigate as any)('LocationPicker', {
+      field,
+      // For a field with nothing set yet, start the map at the device's
+      // live location (or near the pickup point for TO) rather than a
+      // blank world map — still fully editable via search.
+      initialLat:
+        point?.lat ??
+        (field === 'drop'
+          ? pickup?.lat ?? liveLocation?.lat
+          : liveLocation?.lat),
+      initialLng:
+        point?.lng ??
+        (field === 'drop'
+          ? pickup?.lng ?? liveLocation?.lng
+          : liveLocation?.lng),
+      initialAddress: point?.address,
+      // Always 'manual' when reopening an existing point (even a
+      // GPS-auto-filled pickup) — this just means "don't silently
+      // reshuffle it while the user is looking at it"; it does not mean
+      // pickup can never come from GPS in the first place.
+      initialSource: point ? 'manual' : undefined,
+      onPick: (result: {
+        address: string;
+        lat: number;
+        lng: number;
+        source: 'gps' | 'manual';
+      }) => {
+        const newPoint: LocationPoint = {
+          address: result.address,
+          shortName: result.address.split(',')[0].trim(),
+          lat: result.lat,
+          lng: result.lng,
+          source: result.source,
+        };
+        if (field === 'pickup') {
+          pickupUserSetRef.current = true;
+          setPickup(newPoint);
+        } else setDrop(newPoint);
+      },
+    });
   };
 
   const goRide = (mode: 'auto' | 'erickshaw') =>
-    navigation.getParent()?.navigate(
-      'Ride' as never,
-      {
-        mode,
-        pickup: pickup?.address ?? '',
-        drop: drop?.address ?? '',
-      } as never,
-    );
+    (navigation.getParent()?.navigate as any)('Ride', {
+      mode,
+      pickup: pickup?.address ?? '',
+      drop: drop?.address ?? '',
+    });
 
   const goCourier = () => navigation.getParent()?.navigate('Courier' as never);
 
@@ -346,6 +344,31 @@ const HomeScreen = ({ navigation }: Props) => {
             sw={2}
           />
         </TouchableOpacity>
+
+        {/* ── Map preview ────────────────────────────────────────────────── */}
+        {/* Non-interactive (scrollEnabled=false prevents gesture conflicts
+            with the outer ScrollView). Shows user's real location.
+            showRoute is off here — no floating pickup/drop chips on the
+            map; that info now lives in the route card below it instead. */}
+        <View style={[styles.mapWrap, Shadows.card]}>
+          <MapView
+            height={vscale(200)}
+            showRoute={false}
+            showControls={false}
+            interactive={false}
+            pickup={pickup?.shortName}
+            drop={drop?.shortName}
+            pickupCoord={
+              pickup
+                ? { latitude: pickup.lat, longitude: pickup.lng }
+                : undefined
+            }
+            dropCoord={
+              drop ? { latitude: drop.lat, longitude: drop.lng } : undefined
+            }
+            onLocationUpdate={handleLocationUpdate}
+          />
+        </View>
 
         {/* ── Route card ─────────────────────────────────────────────────── */}
         {/* Unified FROM / TO interaction — one card, two rows, no confusion. */}
@@ -455,29 +478,6 @@ const HomeScreen = ({ navigation }: Props) => {
           </TouchableOpacity>
         </View>
 
-        {/* ── Map preview ────────────────────────────────────────────────── */}
-        {/* Non-interactive (scrollEnabled=false prevents gesture conflicts
-            with the outer ScrollView). Shows user's real location. */}
-        <View style={[styles.mapWrap, Shadows.card]}>
-          <MapView
-            height={vscale(200)}
-            showRoute={!!pickup || !!drop}
-            showControls={false}
-            interactive={false}
-            pickup={pickup?.shortName}
-            drop={drop?.shortName}
-            pickupCoord={
-              pickup
-                ? { latitude: pickup.lat, longitude: pickup.lng }
-                : undefined
-            }
-            dropCoord={
-              drop ? { latitude: drop.lat, longitude: drop.lng } : undefined
-            }
-            onLocationUpdate={handleLocationUpdate}
-          />
-        </View>
-
         {/* ── Book button — only active once BOTH pickup and drop are set ── */}
         {pickup && drop ? (
           <TouchableOpacity
@@ -516,7 +516,7 @@ const HomeScreen = ({ navigation }: Props) => {
           {t.home.serviceItems.map((s, i) => (
             <TouchableOpacity
               key={SERVICE_IDS[i]}
-              style={styles.serviceCard}
+              style={[styles.serviceCard, { backgroundColor: SERVICE_BG[i] }]}
               activeOpacity={0.75}
               onPress={() =>
                 SERVICE_IDS[i] === 'courier'
@@ -526,17 +526,12 @@ const HomeScreen = ({ navigation }: Props) => {
                     )
               }
             >
-              <View
-                style={[
-                  styles.serviceIconWrap,
-                  { backgroundColor: SERVICE_BG[i] },
-                ]}
-              >
+              <View style={styles.serviceIconWrap}>
                 <Icon
                   name={SERVICE_ICONS[i]}
-                  size={20}
+                  size={24}
                   stroke={Colors.ink}
-                  sw={1.7}
+                  sw={1.8}
                 />
               </View>
               <Text style={styles.serviceLabel}>{s.label}</Text>
@@ -810,7 +805,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.ink,
     borderRadius: Radii.xl,
     paddingVertical: fscale(18),
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.xs,
     ...Shadows.strong,
   },
   bookBtnText: {
@@ -824,7 +819,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.xs,
-    marginBottom: Spacing.xl,
+    marginBottom: Spacing.xs,
     opacity: 0.55,
   },
   bookHintText: {
@@ -855,30 +850,35 @@ const styles = StyleSheet.create({
   },
   serviceCard: {
     width: '31%',
-    backgroundColor: Colors.bgWhite,
     borderRadius: Radii.lg,
-    padding: Spacing.md,
+    paddingVertical: fscale(16),
+    paddingHorizontal: Spacing.md,
     ...Shadows.card,
+    shadowOpacity: 0.1,
+    elevation: 3,
   },
   serviceIconWrap: {
-    width: fscale(40),
-    height: fscale(40),
-    borderRadius: Radii.md,
+    width: fscale(48),
+    height: fscale(48),
+    borderRadius: fscale(24),
+    backgroundColor: 'rgba(255,255,255,0.85)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.sm,
   },
   serviceLabel: {
     ...Typography.bodySmall,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-    fontSize: fscale(13),
+    fontWeight: '800',
+    color: Colors.ink,
+    fontSize: fscale(14.5),
+    letterSpacing: -0.2,
   },
   serviceSub: {
     ...Typography.caption,
     color: Colors.textSecondary,
-    fontSize: fscale(11),
-    marginTop: 1,
+    fontSize: fscale(11.5),
+    marginTop: 2,
+    fontWeight: '500',
   },
 
   // Promo

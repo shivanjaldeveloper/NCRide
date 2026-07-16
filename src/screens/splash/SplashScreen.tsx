@@ -27,8 +27,10 @@ import {
   setSession,
   clearAuth,
   hasEverLoggedIn,
+  hasSeenOnboarding,
 } from '../../utils/auth';
 import { checkFullLocationStatus } from '../../utils/location';
+import { hasAcceptedCurrentTerms } from '../../utils/terms';
 import { verifyCookie, isAuthApiError } from '../../services/authApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
@@ -90,9 +92,14 @@ const SplashScreen = ({ navigation }: Props) => {
         if (!cookie) {
           // No cookie -> could be a genuinely first-ever launch, OR a
           // returning/registered user who logged out (or whose session
-          // expired) — only the former should see onboarding.
-          const everLoggedIn = await hasEverLoggedIn();
-          if (everLoggedIn) {
+          // expired), OR a user who already flipped through onboarding
+          // once before (Skip/Get Started) without logging in — only a
+          // true first-ever launch should see onboarding again.
+          const [everLoggedIn, seenOnboarding] = await Promise.all([
+            hasEverLoggedIn(),
+            hasSeenOnboarding(),
+          ]);
+          if (everLoggedIn || seenOnboarding) {
             navigation.replace('OTPLogin');
           } else {
             const savedLocale = await getPersistedLocale();
@@ -133,7 +140,13 @@ const SplashScreen = ({ navigation }: Props) => {
           }
 
           // Valid cookie + complete profile -> Home (still gated on
-          // location permission/services being ready, as before).
+          // terms-version + location permission/services being ready).
+          const termsOk = await hasAcceptedCurrentTerms();
+          if (!termsOk) {
+            navigation.replace('TermsUpdate');
+            return;
+          }
+
           const locStatus = await checkFullLocationStatus();
           if (locStatus.allGood) {
             navigation.replace('HomeTabs');
@@ -151,6 +164,11 @@ const SplashScreen = ({ navigation }: Props) => {
             await clearAuth();
             navigation.replace('OTPLogin');
           } else {
+            const termsOk = await hasAcceptedCurrentTerms();
+            if (!termsOk) {
+              navigation.replace('TermsUpdate');
+              return;
+            }
             const locStatus = await checkFullLocationStatus();
             if (locStatus.allGood) {
               navigation.replace('HomeTabs');

@@ -16,6 +16,7 @@ import { NCButton, Icon } from '../../components/common';
 import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
 import { setLoggedIn, setSession } from '../../utils/auth';
+import { acceptTerms } from '../../utils/terms';
 import { checkFullLocationStatus } from '../../utils/location';
 import {
   updateUserProfile,
@@ -75,6 +76,7 @@ const RegistrationScreen = ({ navigation, route }: Props) => {
         cookieRes.Email || trimmedEmail,
       );
       await setLoggedIn();
+      acceptTerms(cookieRes.Cookie);
 
       const trimmedReferral = referral.trim();
       if (!trimmedReferral) {

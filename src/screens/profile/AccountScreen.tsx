@@ -9,11 +9,16 @@ import type {
   RootStackParamList,
 } from '../../navigation/types';
 import { TopSafeStrap } from '../../components/layout';
-import { NCCard, Icon, Row } from '../../components/common';
+import { NCCard, Icon, Row, ReferralCodeModal } from '../../components/common';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
 import { LANGUAGE_OPTIONS } from '../../i18n/translations';
 import { getName, getEmail, getUsername } from '../../utils/auth';
+import {
+  getAppliedReferral,
+  setAppliedReferral,
+  type AppliedReferral,
+} from '../../utils/referral';
 
 type Props = CompositeScreenProps<
   BottomTabScreenProps<HomeTabParamList, 'Account'>,
@@ -47,25 +52,38 @@ const AccountScreen = ({ navigation }: Props) => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
+  const [appliedReferral, setAppliedReferralState] =
+    useState<AppliedReferral | null>(null);
+  const [referralModalVisible, setReferralModalVisible] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       (async () => {
-        const [n, e, u] = await Promise.all([
+        const [n, e, u, applied] = await Promise.all([
           getName(),
           getEmail(),
           getUsername(),
+          getAppliedReferral(),
         ]);
         if (cancelled) return;
         setName(n ?? '');
         setEmail(e ?? '');
         setMobile(u ?? '');
+        setAppliedReferralState(applied);
       })();
       return () => {
         cancelled = true;
       };
     }, []),
+  );
+
+  const handleReferralApplied = useCallback(
+    async (code: string, discountLabel: string) => {
+      await setAppliedReferral(code, discountLabel);
+      setAppliedReferralState({ code, discountLabel });
+    },
+    [],
   );
 
   const displayName = name || 'Your account';
@@ -139,6 +157,19 @@ const AccountScreen = ({ navigation }: Props) => {
             sub={t.account.referEarnSub}
             onPress={() => go('Referrals')}
           />
+          <Row
+            icon="gift"
+            title={t.account.applyReferral}
+            sub={
+              appliedReferral
+                ? `${t.account.applyReferralAppliedPrefix} ${appliedReferral.code} · ${appliedReferral.discountLabel}`
+                : t.account.applyReferralSub
+            }
+            accent={appliedReferral ? Colors.accentSoft : undefined}
+            onPress={
+              appliedReferral ? undefined : () => setReferralModalVisible(true)
+            }
+          />
         </NCCard>
 
         <NCCard pad={4} style={styles.menuCard}>
@@ -175,6 +206,12 @@ const AccountScreen = ({ navigation }: Props) => {
 
         <Text style={styles.footer}>{t.common.appVersion}</Text>
       </ScrollView>
+
+      <ReferralCodeModal
+        visible={referralModalVisible}
+        onClose={() => setReferralModalVisible(false)}
+        onApplied={handleReferralApplied}
+      />
     </View>
   );
 };

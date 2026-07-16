@@ -4,6 +4,7 @@ export { default as NCCard } from './NCCard';
 export { default as Icon } from './Icon';
 export { default as ServiceTile } from './ServiceTile';
 export { default as Row } from './Row';
+export { default as ReferralCodeModal } from './ReferralCodeModal';
 export { default as Stars } from './Stars';
 export { ICONS } from './iconPaths';
 export type { IconName } from './iconPaths';

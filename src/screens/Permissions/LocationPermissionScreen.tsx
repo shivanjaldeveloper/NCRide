@@ -245,8 +245,13 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
               )}
             </>
           ) : (
-            // No permission yet — show animated pulse dot
+            // No permission yet — a soft radial backdrop with a pinFill
+            // icon (from the existing icon set) instead of an empty box.
             <View style={styles.mapFallback}>
+              <View style={styles.mapBackdrop}>
+                <View style={styles.roadH} />
+                <View style={styles.roadV} />
+              </View>
               <View style={styles.centerDotWrap}>
                 <Animated.View
                   style={[
@@ -257,7 +262,14 @@ const LocationPermissionScreen = ({ navigation }: Props) => {
                     },
                   ]}
                 />
-                <View style={styles.centerDot} />
+                <View style={styles.pinBadge}>
+                  <Icon
+                    name="pinFill"
+                    size={26}
+                    stroke={Colors.blue}
+                    fill={Colors.blue}
+                  />
+                </View>
               </View>
             </View>
           )}
@@ -370,21 +382,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  mapBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  roadH: {
+    position: 'absolute',
+    top: '38%',
+    left: 0,
+    right: 0,
+    height: fscale(10),
+    backgroundColor: '#fff',
+    opacity: 0.6,
+  },
+  roadV: {
+    position: 'absolute',
+    left: '32%',
+    top: 0,
+    bottom: 0,
+    width: fscale(10),
+    backgroundColor: '#fff',
+    opacity: 0.6,
+  },
   centerDotWrap: { alignItems: 'center', justifyContent: 'center' },
   pulseRing: {
     position: 'absolute',
-    width: fscale(56),
-    height: fscale(56),
-    borderRadius: fscale(28),
+    width: fscale(64),
+    height: fscale(64),
+    borderRadius: fscale(32),
     backgroundColor: 'rgba(46,125,255,0.35)',
   },
-  centerDot: {
-    width: fscale(28),
-    height: fscale(28),
-    borderRadius: fscale(14),
-    backgroundColor: Colors.blue,
-    borderWidth: 5,
-    borderColor: '#fff',
+  pinBadge: {
+    width: fscale(48),
+    height: fscale(48),
+    borderRadius: fscale(24),
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 4,
+    borderColor: 'rgba(46,125,255,0.18)',
   },
   locatingOverlay: {
     position: 'absolute',

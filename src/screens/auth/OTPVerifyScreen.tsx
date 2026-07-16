@@ -18,6 +18,7 @@ import { NCButton, Icon } from '../../components/common';
 import { Colors, Spacing, fscale, vscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
 import { setLoggedIn, setSession } from '../../utils/auth';
+import { acceptTerms } from '../../utils/terms';
 import { checkFullLocationStatus } from '../../utils/location';
 import {
   verifyOtp,
@@ -188,6 +189,13 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
         );
       }
 
+      // Re-affirm terms acceptance now that a session cookie exists — the
+      // local record was already written when the checkbox was checked on
+      // OTPLoginScreen; this call is what (eventually) syncs it to the
+      // backend too, once TERMS_SYNC_ENABLED is flipped on. No-op-safe if
+      // it fails; never blocks login.
+      acceptTerms(cookieRes.Cookie);
+
       const hasName = !!cookieRes.Name && cookieRes.Name.trim().length > 0;
       const hasEmail = !!cookieRes.Email && cookieRes.Email.trim().length > 0;
 
@@ -355,28 +363,30 @@ const OTPVerifyScreen = ({ navigation, route }: Props) => {
               )}
             </Text>
           </TouchableOpacity>
-
-          <View style={{ flex: 1 }} />
-
-          <NCButton
-            label={t.auth.verifyContinue}
-            iconRight="arrowRight"
-            onPress={handleVerify}
-            loading={loading}
-            disabled={otpString.length < OTP_LENGTH}
-            variant="primary"
-            size="lg"
-          />
-
-          <Text style={styles.legal}>
-            {t.auth.legalPrefix}
-            <Text style={styles.legalLink}>{t.auth.terms}</Text>
-            {t.auth.legalMid}
-            <Text style={styles.legalLink}>{t.auth.privacy}</Text>
-            {t.auth.legalSuffix}
-          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Outside KeyboardAvoidingView on purpose — stays pinned to the
+          screen bottom and never gets pushed up when the keyboard opens. */}
+      <View style={styles.bottomBar}>
+        <NCButton
+          label={t.auth.verifyContinue}
+          iconRight="arrowRight"
+          onPress={handleVerify}
+          loading={loading}
+          disabled={otpString.length < OTP_LENGTH}
+          variant="primary"
+          size="lg"
+        />
+
+        <Text style={styles.legal}>
+          {t.auth.legalPrefix}
+          <Text style={styles.legalLink}>{t.auth.terms}</Text>
+          {t.auth.legalMid}
+          <Text style={styles.legalLink}>{t.auth.privacy}</Text>
+          {t.auth.legalSuffix}
+        </Text>
+      </View>
     </ScreenShell>
   );
 };
@@ -385,7 +395,15 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
     paddingHorizontal: Spacing.screen,
-    paddingBottom: vscale(32),
+    paddingBottom: vscale(24),
+  },
+  bottomBar: {
+    paddingHorizontal: Spacing.screen,
+    paddingTop: vscale(12),
+    paddingBottom: vscale(20),
+    backgroundColor: Colors.bgWhite,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
   },
   backBtn: {
     width: fscale(40),

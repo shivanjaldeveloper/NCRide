@@ -12,6 +12,12 @@ const EMAIL_KEY = '@ncride_email';
 // straight to Login, not back through onboarding — only a genuinely
 // first-ever launch should see it.
 const HAS_EVER_LOGGED_IN_KEY = '@ncride_has_ever_logged_in';
+// Set the moment the user leaves the onboarding carousel (via "Get
+// Started" on the last slide OR "Skip") — independent of whether they
+// ever actually log in. Ensures onboarding is shown only once per
+// install: on every later cold start (even if they never logged in, or
+// logged out) Splash skips straight to OTPLogin instead of replaying it.
+const HAS_SEEN_ONBOARDING_KEY = '@ncride_has_seen_onboarding';
 
 export const setLoggedIn = async (): Promise<void> => {
   await AsyncStorage.setItem(AUTH_KEY, 'true');
@@ -51,6 +57,16 @@ export const setSession = async (
 
 export const hasEverLoggedIn = async (): Promise<boolean> => {
   const val = await AsyncStorage.getItem(HAS_EVER_LOGGED_IN_KEY);
+  return val === 'true';
+};
+
+// Call once, right when the user leaves onboarding (Skip or Get Started).
+export const setHasSeenOnboarding = async (): Promise<void> => {
+  await AsyncStorage.setItem(HAS_SEEN_ONBOARDING_KEY, 'true');
+};
+
+export const hasSeenOnboarding = async (): Promise<boolean> => {
+  const val = await AsyncStorage.getItem(HAS_SEEN_ONBOARDING_KEY);
   return val === 'true';
 };
 

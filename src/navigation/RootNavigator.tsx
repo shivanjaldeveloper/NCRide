@@ -11,6 +11,7 @@ import LanguageSelectScreen from '../screens/language/LanguageSelectScreen';
 import OTPLoginScreen from '../screens/auth/OTPLoginScreen';
 import OTPVerifyScreen from '../screens/auth/OTPVerifyScreen';
 import RegistrationScreen from '../screens/auth/RegistrationScreen';
+import TermsUpdateScreen from '../screens/auth/TermsUpdateScreen';
 import LocationPermissionScreen from '../screens/Permissions/LocationPermissionScreen';
 import LocationPickerScreen from '../screens/location/LocationPickerScreen';
 import HomeTabs from './HomeTabs';
@@ -70,6 +71,11 @@ const AppNavigator = () => (
       <Stack.Screen
         name="Registration"
         component={RegistrationScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: false }}
+      />
+      <Stack.Screen
+        name="TermsUpdate"
+        component={TermsUpdateScreen}
         options={{ animation: 'slide_from_right', gestureEnabled: false }}
       />
       <Stack.Screen
