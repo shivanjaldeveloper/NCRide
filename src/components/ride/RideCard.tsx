@@ -13,6 +13,15 @@ export interface RideOption {
   fare: number;
   max: number;
   glyph: RideGlyph;
+  // Real pre-discount fare from the ride-estimate API — when present,
+  // RideCard shows THIS struck through instead of the old `fare + 32`
+  // guess. Optional so existing static ride data keeps working unchanged.
+  originalFare?: number;
+  discountText?: string; // e.g. "₹14 OFF"
+  driversAvailable?: number;
+  // false only when the API reports this mode as not currently available
+  // (e.g. Status !== 'AVAILABLE') — card is shown dimmed and unselectable.
+  available?: boolean;
 }
 
 interface Props {
@@ -216,11 +225,17 @@ const Glyph = ({ glyph }: { glyph: RideGlyph }) => {
  * Inverts to a dark "selected" treatment, matching the reference exactly.
  */
 const RideCard = ({ ride, selected, onSelect, showStrike = true }: Props) => {
+  const isAvailable = ride.available !== false;
   return (
     <TouchableOpacity
       activeOpacity={0.85}
-      onPress={() => onSelect(ride)}
-      style={[styles.card, selected ? styles.cardSelected : styles.cardDefault]}
+      onPress={() => isAvailable && onSelect(ride)}
+      disabled={!isAvailable}
+      style={[
+        styles.card,
+        selected ? styles.cardSelected : styles.cardDefault,
+        !isAvailable && styles.cardUnavailable,
+      ]}
     >
       <View style={styles.glyphWrap}>
         <Glyph glyph={ride.glyph} />
@@ -252,6 +267,9 @@ const RideCard = ({ ride, selected, onSelect, showStrike = true }: Props) => {
             {ride.tag}
           </Text>
         </View>
+        {!isAvailable && (
+          <Text style={styles.unavailableText}>Not available right now</Text>
+        )}
       </View>
       <View style={styles.fareWrap}>
         <Text style={[styles.fare, selected && styles.textInverse]}>
@@ -261,13 +279,16 @@ const RideCard = ({ ride, selected, onSelect, showStrike = true }: Props) => {
           <Text
             style={[styles.fareStrike, selected && styles.textInverseFaint]}
           >
-            ₹{ride.fare + 32}
+            ₹{ride.originalFare ?? ride.fare + 32}
           </Text>
         ) : (
           <Text style={[styles.estFare, selected && styles.textInverseFaint]}>
             est. fare
           </Text>
         )}
+        {ride.discountText ? (
+          <Text style={styles.discountText}>{ride.discountText}</Text>
+        ) : null}
       </View>
     </TouchableOpacity>
   );
@@ -300,6 +321,7 @@ const styles = StyleSheet.create({
     shadowRadius: 24,
     elevation: 6,
   },
+  cardUnavailable: { opacity: 0.45 },
   glyphWrap: {
     width: fscale(60),
     height: fscale(38),
@@ -340,6 +362,18 @@ const styles = StyleSheet.create({
     fontSize: fscale(10.5),
     color: Colors.textTertiary,
     marginTop: 1,
+  },
+  discountText: {
+    fontSize: fscale(10),
+    fontWeight: '700',
+    color: Colors.green,
+    marginTop: 2,
+  },
+  unavailableText: {
+    fontSize: fscale(10.5),
+    color: Colors.textTertiary,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   textInverse: { color: '#fff' },
   textInverseFaint: { color: 'rgba(255,255,255,0.6)' },

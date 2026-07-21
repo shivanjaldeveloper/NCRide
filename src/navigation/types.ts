@@ -34,7 +34,18 @@ export type RootStackParamList = {
     }) => void;
   };
   Ride:
-    | { mode?: 'auto' | 'erickshaw'; pickup?: string; drop?: string }
+    | {
+        mode?: 'auto' | 'erickshaw';
+        pickup?: string;
+        drop?: string;
+        // Real coordinates from HomeScreen's resolved pickup/drop points —
+        // required for RideScreen to actually call getRideEstimate (it
+        // treats lat/lng === 0 as "no coordinate yet" and skips the call).
+        pickupLat?: number;
+        pickupLng?: number;
+        dropLat?: number;
+        dropLng?: number;
+      }
     | undefined;
   Driver: undefined;
   Tracking: undefined;

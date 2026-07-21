@@ -22,8 +22,11 @@ DerivedData
 *.xcuserstate
 **/.xcode.env.local
 
-# Ignore zip files
+# Ignore all ZIP files
 *.zip
+
+# Ignore src followed by one or more digits
+src[0-9]*/
 
 # Android/IntelliJ
 #

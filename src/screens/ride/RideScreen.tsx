@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
@@ -12,42 +13,230 @@ import { HeaderBack, Sheet, TopSafeStrap } from '../../components/layout';
 import { NCButton, Icon } from '../../components/common';
 import { MapView } from '../../components/map';
 import { LocFieldStack, RideCard } from '../../components/ride';
-import type { RideOption } from '../../components/ride';
+import type { RideOption, RideGlyph } from '../../components/ride';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
-import { AUTO_OPTIONS, ERICKSHAW_OPTIONS } from '../../constants/ridesData';
 import { useTranslation } from '../../i18n';
+import { getSessionCookie } from '../../utils/auth';
+import { decodePolyline } from '../../utils/polyline';
+import {
+  getRideEstimate,
+  isRideApiError,
+  type RideEstimateResponse,
+  type RideModeEstimate,
+} from '../../services/rideApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Ride'>;
 type Mode = 'auto' | 'erickshaw';
+
+type LocationPoint = {
+  address: string;
+  lat: number;
+  lng: number;
+};
+
+// Backend's ModeCode -> the glyph RideCard already knows how to draw.
+// Unrecognised codes fall back to 'auto' rather than crashing the list.
+const GLYPH_BY_MODE_CODE: Record<string, RideGlyph> = {
+  BIKE: 'bike',
+  AUTO: 'auto',
+  ERICKSHAW: 'erickshaw',
+  CAR: 'sedan',
+  SEDAN: 'sedan',
+  SUV: 'suv',
+};
+
+const glyphForModeCode = (code: string): RideGlyph =>
+  GLYPH_BY_MODE_CODE[code?.toUpperCase()] ?? 'auto';
+
+const numOrUndefined = (v: string | undefined): number | undefined => {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+};
+
+// Maps one live estimate mode straight onto the RideCard's existing
+// RideOption shape — nothing in RideCard/RideOption needed to change
+// structurally, just the extra optional fields added for real fare/
+// discount/availability data.
+const modeToRideOption = (m: RideModeEstimate): RideOption => ({
+  id: m.ModeCode,
+  name: m.ModeName,
+  tag: m.CapacityText,
+  eta: m.DriverArrivalText,
+  fare: numOrUndefined(m.FinalFare) ?? 0,
+  max: numOrUndefined(m.Capacity) ?? 0,
+  glyph: glyphForModeCode(m.ModeCode),
+  originalFare: numOrUndefined(m.OriginalFare),
+  discountText: m.DiscountAmountText,
+  driversAvailable: numOrUndefined(m.AvailableDrivers),
+  available: m.Status === 'AVAILABLE',
+});
 
 const RideScreen = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
   const mode: Mode = route.params?.mode === 'erickshaw' ? 'erickshaw' : 'auto';
   const meta = {
-    auto: {
-      ...t.ride.auto,
-      options: AUTO_OPTIONS,
-      defaultDrop: 'Connaught Place, Delhi',
-    },
-    erickshaw: {
-      ...t.ride.erickshaw,
-      options: ERICKSHAW_OPTIONS,
-      defaultDrop: 'Botanical Garden Metro',
-    },
+    auto: { ...t.ride.auto, defaultDrop: 'Connaught Place, Delhi' },
+    erickshaw: { ...t.ride.erickshaw, defaultDrop: 'Botanical Garden Metro' },
   }[mode];
 
-  const [pickup, setPickup] = useState(
-    route.params?.pickup || 'Current Location',
+  // Seeded from whatever HomeScreen's location picker resolved (address +
+  // real lat/lng) — falls back to a plain address-only point (no
+  // coordinates) if this screen was opened without a prior pick.
+  // Coordinates are what unlocks the ride-estimate call below (map
+  // markers, route line, live fares — all come from that one response).
+  const [pickup, setPickup] = useState<LocationPoint>({
+    address: route.params?.pickup || 'Current Location',
+    lat: route.params?.pickupLat ?? 0,
+    lng: route.params?.pickupLng ?? 0,
+  });
+  const [drop, setDrop] = useState<LocationPoint>({
+    address: route.params?.drop || meta.defaultDrop,
+    lat: route.params?.dropLat ?? 0,
+    lng: route.params?.dropLng ?? 0,
+  });
+  const [selected, setSelected] = useState<RideOption | undefined>(undefined);
+
+  const hasPickupCoord = pickup.lat !== 0 && pickup.lng !== 0;
+  const hasDropCoord = drop.lat !== 0 && drop.lng !== 0;
+
+  // ── Ride estimate — one call gets pickup/drop confirmation, the route
+  // (distance/duration + the exact polyline the fares were priced against),
+  // and every available ride mode with live fares. Re-fires whenever the
+  // pickup/drop coordinates change (e.g. user edits either field). ────────
+  const [estimate, setEstimate] = useState<RideEstimateResponse | null>(null);
+  const [loadingEstimate, setLoadingEstimate] = useState(false);
+  const [estimateError, setEstimateError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!hasPickupCoord || !hasDropCoord) {
+      if (__DEV__) {
+        console.log(
+          '[RideScreen] Skipping getRideEstimate — missing coordinate(s):',
+          { pickup, drop, hasPickupCoord, hasDropCoord },
+        );
+      }
+      setEstimate(null);
+      setEstimateError(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setLoadingEstimate(true);
+      setEstimateError(null);
+      try {
+        const cookie = (await getSessionCookie()) ?? '';
+        if (__DEV__) {
+          console.log('[RideScreen] Requesting ride estimate:', {
+            pickup,
+            drop,
+            region: 'BEED',
+          });
+        }
+        const result = await getRideEstimate({
+          cookie,
+          pickupLat: pickup.lat,
+          pickupLng: pickup.lng,
+          pickupAddress: pickup.address,
+          dropLat: drop.lat,
+          dropLng: drop.lng,
+          dropAddress: drop.address,
+          // TODO: the app supports multiple operating regions (Beed,
+          // Chh. Sambhaji Nagar, NCR/Delhi, etc.) — wire real region
+          // detection here (e.g. nearest supported city to `pickup`) once
+          // that selection logic exists elsewhere in the app. Hardcoded to
+          // match your test data for now so this isn't blocked on it.
+          region: 'BEED',
+        });
+        if (cancelled) return;
+        if (__DEV__) {
+          console.log('[RideScreen] Received ride estimate:', {
+            modesCount: result.Modes?.length ?? 0,
+            modes: result.Modes?.map(m => m.ModeCode),
+            distanceKm: result.Route?.DistanceKM,
+          });
+        }
+        setEstimate(result);
+        // Preselect the first AVAILABLE mode (matching this screen's
+        // auto/erickshaw entry point when possible) rather than leaving
+        // nothing chosen.
+        const modes = result.Modes ?? [];
+        const preferredCode = mode === 'erickshaw' ? 'ERICKSHAW' : 'AUTO';
+        const preferred =
+          modes.find(
+            m => m.ModeCode === preferredCode && m.Status === 'AVAILABLE',
+          ) ??
+          modes.find(m => m.Status === 'AVAILABLE') ??
+          modes[0];
+        setSelected(preferred ? modeToRideOption(preferred) : undefined);
+      } catch (err) {
+        if (cancelled) return;
+        if (__DEV__) {
+          console.warn('[RideScreen] getRideEstimate failed:', err);
+        }
+        setEstimate(null);
+        setEstimateError(
+          isRideApiError(err) ? err.message : 'Could not fetch ride estimate.',
+        );
+      } finally {
+        if (!cancelled) setLoadingEstimate(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    pickup.lat,
+    pickup.lng,
+    drop.lat,
+    drop.lng,
+    hasPickupCoord,
+    hasDropCoord,
+  ]);
+
+  const rideOptions: RideOption[] = useMemo(
+    () => (estimate?.Modes ?? []).map(modeToRideOption),
+    [estimate],
   );
-  const [drop, setDrop] = useState(route.params?.drop || meta.defaultDrop);
-  const [selected, setSelected] = useState<RideOption | undefined>(
-    meta.options[0],
+
+  const routeCoords = useMemo(
+    () =>
+      estimate?.Route?.EncodedPolyline
+        ? decodePolyline(estimate.Route.EncodedPolyline)
+        : undefined,
+    [estimate?.Route?.EncodedPolyline],
   );
 
   const handleSwap = () => {
-    setPickup(p => {
-      setDrop(p);
-      return drop;
+    setPickup(drop);
+    setDrop(pickup);
+  };
+
+  // Same full-screen map picker HomeScreen uses — hands its result straight
+  // back via onPick + goBack() rather than round-tripping through route
+  // params.
+  const openPicker = (field: 'pickup' | 'drop') => {
+    const point = field === 'pickup' ? pickup : drop;
+    (navigation.getParent()?.navigate as any)('LocationPicker', {
+      field,
+      initialLat: point.lat !== 0 ? point.lat : undefined,
+      initialLng: point.lng !== 0 ? point.lng : undefined,
+      initialAddress: point.address,
+      initialSource: point.lat !== 0 ? 'manual' : undefined,
+      onPick: (result: {
+        address: string;
+        lat: number;
+        lng: number;
+        source: 'gps' | 'manual';
+      }) => {
+        const newPoint: LocationPoint = {
+          address: result.address,
+          lat: result.lat,
+          lng: result.lng,
+        };
+        if (field === 'pickup') setPickup(newPoint);
+        else setDrop(newPoint);
+      },
     });
   };
 
@@ -71,10 +260,28 @@ const RideScreen = ({ navigation, route }: Props) => {
         <MapView
           height={400}
           style={styles.mapFill}
-          showRoute
+          // Pickup/drop pill chips removed from above the map — the FROM/TO
+          // card below (LocFieldStack) already shows both addresses, so the
+          // chips were redundant clutter over the route line.
+          showRoute={false}
           showControls={false}
-          pickup={pickup}
-          drop={drop}
+          pickup={pickup.address}
+          drop={drop.address}
+          pickupCoord={
+            hasPickupCoord
+              ? { latitude: pickup.lat, longitude: pickup.lng }
+              : undefined
+          }
+          dropCoord={
+            hasDropCoord
+              ? { latitude: drop.lat, longitude: drop.lng }
+              : undefined
+          }
+          // The exact route the backend priced the fares against — drawn
+          // as-is, no separate client-side route calculation.
+          externalRouteCoords={routeCoords}
+          routeColor={estimate?.Route?.PolylineColor}
+          routeWidth={numOrUndefined(estimate?.Route?.PolylineWidth)}
         />
       </View>
       <Sheet style={styles.sheet}>
@@ -94,18 +301,47 @@ const RideScreen = ({ navigation, route }: Props) => {
             </View>
           )}
           <LocFieldStack
-            pickup={pickup}
-            drop={drop}
-            onPickupPress={() => {}}
-            onDropPress={() => {}}
+            pickup={pickup.address}
+            drop={drop.address}
+            onPickupPress={() => openPicker('pickup')}
+            onDropPress={() => openPicker('drop')}
             onSwap={handleSwap}
           />
           <View style={styles.chooseRow}>
             <Text style={styles.chooseLabel}>{t.ride.chooseRide}</Text>
-            <Text style={styles.chooseMeta}>9.4 km · 22 min</Text>
+            <Text style={styles.chooseMeta}>
+              {estimate?.Route
+                ? `${estimate.Route.DistanceKM} km · ${estimate.Route.DurationMinutes} min`
+                : loadingEstimate
+                ? 'Calculating…'
+                : '— km · — min'}
+            </Text>
           </View>
+
+          {loadingEstimate && rideOptions.length === 0 && (
+            <View style={styles.stateRow}>
+              <ActivityIndicator size="small" color={Colors.textTertiary} />
+              <Text style={styles.stateText}>Fetching ride options…</Text>
+            </View>
+          )}
+
+          {!loadingEstimate && estimateError && (
+            <View style={styles.stateRow}>
+              <Icon name="sos" size={16} stroke={Colors.red} />
+              <Text style={styles.stateTextError}>{estimateError}</Text>
+            </View>
+          )}
+
+          {!loadingEstimate && !estimateError && rideOptions.length === 0 && (
+            <View style={styles.stateRow}>
+              <Text style={styles.stateText}>
+                No ride options available for this route right now.
+              </Text>
+            </View>
+          )}
+
           <View style={styles.rideList}>
-            {meta.options.map(r => (
+            {rideOptions.map(r => (
               <RideCard
                 key={r.id}
                 ride={r}
@@ -145,6 +381,7 @@ const RideScreen = ({ navigation, route }: Props) => {
                 onPress={() => navigation.navigate('Driver')}
                 variant="primary"
                 size="lg"
+                disabled={!selected}
               />
             </View>
           </View>
@@ -212,6 +449,14 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontWeight: '500',
   },
+  stateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingVertical: fscale(10),
+  },
+  stateText: { fontSize: fscale(12), color: Colors.textSecondary },
+  stateTextError: { fontSize: fscale(12), color: '#D64545' },
   rideList: { gap: Spacing.sm },
   couponRow: {
     flexDirection: 'row',

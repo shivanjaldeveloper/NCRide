@@ -15,8 +15,14 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { Colors, Spacing, fscale, vscale, Radii, Shadows } from '../../theme';
 import { Icon } from '../../components/common';
-import { reverseGeocode, searchPlaces } from '../../utils/geocode';
+import {
+  reverseGeocode,
+  searchPlaces,
+  getPlaceDetails,
+} from '../../utils/geocode';
 import type { PlaceSuggestion } from '../../utils/geocode';
+import { getRecentPlaces, addRecentPlace } from '../../utils/recentPlaces';
+import type { RecentPlace } from '../../utils/recentPlaces';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LocationPicker'>;
 
@@ -100,6 +106,17 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
   // location" pill just above it regardless of how tall the address text
   // wraps to.
   const [cardHeight, setCardHeight] = useState(0);
+  // Recently-confirmed locations (search/GPS/pin-drop), shown instantly
+  // when the search box is focused but empty — no network round trip.
+  const [recents, setRecents] = useState<RecentPlace[]>([]);
+  // True while resolving an autocomplete prediction's placeId into real
+  // coordinates via Place Details (New) — predictions themselves carry no
+  // lat/lng, by design, to keep keystroke-by-keystroke search fast.
+  const [resolvingSuggestion, setResolvingSuggestion] = useState(false);
+
+  useEffect(() => {
+    getRecentPlaces().then(setRecents);
+  }, []);
 
   const isPickup = field === 'pickup';
   const accentColor = isPickup ? Colors.green : Colors.blue;
@@ -288,10 +305,38 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
     [scheduleGeocode],
   );
 
-  const handleSelectSuggestion = (item: PlaceSuggestion) => {
+  const handleSelectSuggestion = async (item: PlaceSuggestion) => {
     console.log(
       `[LocationPicker] handleSelectSuggestion → ${JSON.stringify(item)}`,
     );
+    userInteractedRef.current = true;
+    autoRefineLockedRef.current = true;
+    sourceRef.current = 'manual';
+    setQuery('');
+    setSuggestions([]);
+    closeDropdown();
+
+    // Autocomplete (New) predictions carry no lat/lng — resolve the real
+    // coordinates now, on selection only, via Place Details (New).
+    if (!item.lat && !item.lng) {
+      setResolvingSuggestion(true);
+      const details = await getPlaceDetails(item.id);
+      setResolvingSuggestion(false);
+      if (details) {
+        jumpToKnownAddress(details.lat, details.lng, details.address);
+        return;
+      }
+      // Details lookup failed (offline/quota) — nothing to drop the pin on.
+      console.log(
+        `[LocationPicker] getPlaceDetails failed for placeId=${item.id}`,
+      );
+      return;
+    }
+
+    jumpToKnownAddress(item.lat, item.lng, item.address);
+  };
+
+  const handleSelectRecent = (item: RecentPlace) => {
     userInteractedRef.current = true;
     autoRefineLockedRef.current = true;
     sourceRef.current = 'manual';
@@ -371,6 +416,14 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
       accuracy: accuracyMeters ?? undefined,
       source: sourceRef.current,
     });
+    // Fire-and-forget — store this pick for instant "recent" suggestions
+    // next time the picker opens. Doesn't block navigation.
+    addRecentPlace({
+      shortName: address.split(',')[0] || address,
+      address,
+      lat: coords.lat,
+      lng: coords.lng,
+    }).catch(() => {});
     navigation.goBack();
   };
 
@@ -493,6 +546,39 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
       {/* Search / suggestions dropdown */}
       {showDropdown && (
         <View style={[styles.dropdown, { top: insets.top + 66 }]}>
+          {query.trim().length < 2 && recents.length > 0 && (
+            <>
+              <View style={styles.recentsHeaderRow}>
+                <Text style={styles.recentsHeaderText}>Recent</Text>
+              </View>
+              {recents.map(item => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.suggestionRow}
+                  activeOpacity={0.7}
+                  onPress={() => handleSelectRecent(item)}
+                >
+                  <View style={styles.suggestionIconWrap}>
+                    <Icon
+                      name="history"
+                      size={14}
+                      stroke={Colors.textSecondary}
+                      sw={2}
+                    />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.suggestionTitle} numberOfLines={1}>
+                      {item.shortName}
+                    </Text>
+                    <Text style={styles.suggestionSub} numberOfLines={1}>
+                      {item.address}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
+
           {query.trim().length >= 2 && searching && (
             <View style={styles.suggestionRow}>
               <ActivityIndicator
@@ -522,6 +608,7 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
                 key={item.id}
                 style={styles.suggestionRow}
                 activeOpacity={0.7}
+                disabled={resolvingSuggestion}
                 onPress={() => handleSelectSuggestion(item)}
               >
                 <View style={styles.suggestionIconWrap}>
@@ -540,6 +627,9 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
                     {item.address}
                   </Text>
                 </View>
+                {resolvingSuggestion && (
+                  <ActivityIndicator size="small" color={Colors.textTertiary} />
+                )}
               </TouchableOpacity>
             ))}
         </View>
@@ -590,7 +680,7 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
             <View style={[styles.dot, { backgroundColor: accentColor }]} />
           </View>
           <View style={{ flex: 1 }}>
-            {dragging || geocoding ? (
+            {dragging || geocoding || resolvingSuggestion ? (
               <View style={styles.geocodingRow}>
                 <ActivityIndicator size="small" color={Colors.textTertiary} />
                 <Text style={styles.geocodingText}>Locating…</Text>
@@ -627,11 +717,12 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
           style={[
             styles.confirmBtn,
             { backgroundColor: accentColor },
-            (!coords || geocoding || dragging) && styles.confirmBtnDisabled,
+            (!coords || geocoding || dragging || resolvingSuggestion) &&
+              styles.confirmBtnDisabled,
           ]}
           activeOpacity={0.85}
           onPress={handleConfirm}
-          disabled={!coords || geocoding || dragging}
+          disabled={!coords || geocoding || dragging || resolvingSuggestion}
         >
           <Text style={styles.confirmBtnText}>
             {isPickup ? 'Set Pickup Here' : 'Set as Destination'}
@@ -717,6 +808,18 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: fscale(11),
+  },
+  recentsHeaderRow: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: fscale(8),
+    paddingBottom: fscale(2),
+  },
+  recentsHeaderText: {
+    fontSize: fscale(11),
+    fontWeight: '700',
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
   suggestionIconWrap: {
     width: fscale(30),

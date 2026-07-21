@@ -260,6 +260,13 @@ const HomeScreen = ({ navigation }: Props) => {
       mode,
       pickup: pickup?.address ?? '',
       drop: drop?.address ?? '',
+      // Previously omitted — RideScreen needs real coordinates (not just
+      // the address text) to fire getRideEstimate at all. Without these it
+      // always saw lat/lng as 0 and silently skipped the live API call.
+      pickupLat: pickup?.lat,
+      pickupLng: pickup?.lng,
+      dropLat: drop?.lat,
+      dropLng: drop?.lng,
     });
 
   const goCourier = () => navigation.getParent()?.navigate('Courier' as never);

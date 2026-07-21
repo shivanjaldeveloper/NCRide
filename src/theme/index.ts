@@ -93,7 +93,11 @@ export const Typography = {
     letterSpacing: 0.8,
   },
   caption: { fontSize: fscale(12), fontWeight: '400' as const },
-  button: { fontSize: fscale(16), fontWeight: '600' as const, letterSpacing: -0.1 },
+  button: {
+    fontSize: fscale(16),
+    fontWeight: '600' as const,
+    letterSpacing: -0.1,
+  },
 } as const;
 
 // ─── Spacing ───────────────────────────────────────────────────────────────

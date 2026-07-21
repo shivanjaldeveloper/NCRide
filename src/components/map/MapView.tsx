@@ -36,6 +36,13 @@ interface Props {
   // road-following route line (and endpoint markers) is drawn on the map.
   pickupCoord?: { latitude: number; longitude: number };
   dropCoord?: { latitude: number; longitude: number };
+  // Pre-computed route line — e.g. decoded from the ride-estimate backend's
+  // own EncodedPolyline. When provided (2+ points), this is drawn as-is and
+  // the internal OSRM route fetch below is skipped entirely, so the line on
+  // screen always matches whatever route the backend actually priced.
+  externalRouteCoords?: { latitude: number; longitude: number }[];
+  routeColor?: string;
+  routeWidth?: number;
   animateVehicle?: boolean;
   style?: ViewStyle;
   children?: React.ReactNode;
@@ -58,6 +65,9 @@ const MapView = ({
   drop = 'Destination',
   pickupCoord,
   dropCoord,
+  externalRouteCoords,
+  routeColor,
+  routeWidth,
   style,
   children,
   onLocationUpdate,
@@ -106,6 +116,21 @@ const MapView = ({
       setRouteCoords(null);
       return;
     }
+
+    // A pre-computed route (e.g. from the ride-estimate API) takes
+    // priority — skip the OSRM fetch entirely and just draw + fit to it.
+    if (externalRouteCoords && externalRouteCoords.length > 1) {
+      routeRequestIdRef.current += 1; // invalidate any OSRM fetch in flight
+      setRouteCoords(externalRouteCoords);
+      requestAnimationFrame(() => {
+        mapRef.current?.fitToCoordinates(externalRouteCoords, {
+          edgePadding: { top: 60, right: 50, bottom: 60, left: 50 },
+          animated: true,
+        });
+      });
+      return;
+    }
+
     const requestId = ++routeRequestIdRef.current;
     (async () => {
       const result = await getRoute(
@@ -132,6 +157,7 @@ const MapView = ({
     pickupCoord?.longitude,
     dropCoord?.latitude,
     dropCoord?.longitude,
+    externalRouteCoords,
   ]);
 
   useEffect(() => {
@@ -304,8 +330,8 @@ const MapView = ({
             {routeCoords && routeCoords.length > 1 && (
               <Polyline
                 coordinates={routeCoords}
-                strokeColor={Colors.blue}
-                strokeWidth={4}
+                strokeColor={routeColor || Colors.blue}
+                strokeWidth={routeWidth || 4}
                 lineCap="round"
                 lineJoin="round"
                 zIndex={1}
