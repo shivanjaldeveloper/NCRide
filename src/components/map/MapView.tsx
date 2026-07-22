@@ -43,6 +43,13 @@ interface Props {
   externalRouteCoords?: { latitude: number; longitude: number }[];
   routeColor?: string;
   routeWidth?: number;
+  // When true: NEVER fall back to the internal OSRM route calculation.
+  // If externalRouteCoords isn't provided (or is empty — e.g. backend sent
+  // no EncodedPolyline / an empty one), no route line is drawn at all —
+  // not even a straight line between the two points. Use this wherever a
+  // real backend-priced route is the only route that should ever be shown
+  // (e.g. RideScreen's ride-estimate flow).
+  externalRouteOnly?: boolean;
   animateVehicle?: boolean;
   style?: ViewStyle;
   children?: React.ReactNode;
@@ -61,13 +68,14 @@ const MapView = ({
   showRoute = true,
   showControls = true,
   interactive = true,
-  pickup = 'Pickup',
-  drop = 'Destination',
+  pickup,
+  drop,
   pickupCoord,
   dropCoord,
   externalRouteCoords,
   routeColor,
   routeWidth,
+  externalRouteOnly,
   style,
   children,
   onLocationUpdate,
@@ -131,6 +139,15 @@ const MapView = ({
       return;
     }
 
+    // Caller only ever wants the backend's own route drawn. If it didn't
+    // send one (missing/empty EncodedPolyline), show NO line at all —
+    // don't fall back to OSRM or a straight line between the points.
+    if (externalRouteOnly) {
+      routeRequestIdRef.current += 1; // invalidate any OSRM fetch in flight
+      setRouteCoords(null);
+      return;
+    }
+
     const requestId = ++routeRequestIdRef.current;
     (async () => {
       const result = await getRoute(
@@ -158,6 +175,7 @@ const MapView = ({
     dropCoord?.latitude,
     dropCoord?.longitude,
     externalRouteCoords,
+    externalRouteOnly,
   ]);
 
   useEffect(() => {
@@ -401,26 +419,32 @@ const MapView = ({
           </View>
         )}
 
-      {showRoute && (
+      {showRoute && (pickup || drop) && (
         <View style={styles.chips}>
-          <View style={styles.chip}>
-            <View style={[styles.chipDot, { backgroundColor: Colors.green }]} />
-            <Text style={styles.chipText} numberOfLines={1}>
-              {pickup}
-            </Text>
-          </View>
-          <View style={styles.chip}>
-            <View
-              style={[
-                styles.chipDot,
-                styles.chipDotSquare,
-                { backgroundColor: Colors.ink },
-              ]}
-            />
-            <Text style={styles.chipText} numberOfLines={1}>
-              {drop}
-            </Text>
-          </View>
+          {pickup && (
+            <View style={styles.chip}>
+              <View
+                style={[styles.chipDot, { backgroundColor: Colors.green }]}
+              />
+              <Text style={styles.chipText} numberOfLines={1}>
+                {pickup}
+              </Text>
+            </View>
+          )}
+          {drop && (
+            <View style={styles.chip}>
+              <View
+                style={[
+                  styles.chipDot,
+                  styles.chipDotSquare,
+                  { backgroundColor: Colors.ink },
+                ]}
+              />
+              <Text style={styles.chipText} numberOfLines={1}>
+                {drop}
+              </Text>
+            </View>
+          )}
         </View>
       )}
 

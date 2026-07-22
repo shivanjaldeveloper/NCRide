@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, View, Text, StyleSheet } from 'react-native';
 import Svg, { Path, Ellipse, Rect, Circle } from 'react-native-svg';
 import { Colors, Radii, fscale } from '../../theme';
+import Icon from '../common/Icon';
 
 export type RideGlyph = 'sedan' | 'suv' | 'auto' | 'bike' | 'erickshaw';
 
@@ -22,6 +23,11 @@ export interface RideOption {
   // false only when the API reports this mode as not currently available
   // (e.g. Status !== 'AVAILABLE') — card is shown dimmed and unselectable.
   available?: boolean;
+  // Surge — only present/true when the API's SurgeApplied === "YES". When
+  // absent/false, the card renders exactly as before (no badge, no color
+  // change) — surge pricing is purely additive to the existing card.
+  surgeActive?: boolean;
+  surgeText?: string; // e.g. "1.5x surge"
 }
 
 interface Props {
@@ -226,6 +232,7 @@ const Glyph = ({ glyph }: { glyph: RideGlyph }) => {
  */
 const RideCard = ({ ride, selected, onSelect, showStrike = true }: Props) => {
   const isAvailable = ride.available !== false;
+  const isSurging = !!ride.surgeActive && !!ride.surgeText;
   return (
     <TouchableOpacity
       activeOpacity={0.85}
@@ -250,6 +257,12 @@ const RideCard = ({ ride, selected, onSelect, showStrike = true }: Props) => {
               · {ride.max} seats
             </Text>
           )}
+          {isSurging && (
+            <View style={styles.surgeBadge}>
+              <Icon name="boltFill" size={9} stroke={Colors.amber} />
+              <Text style={styles.surgeBadgeText}>{ride.surgeText}</Text>
+            </View>
+          )}
         </View>
         <View style={styles.metaRow}>
           {ride.eta ? (
@@ -272,7 +285,13 @@ const RideCard = ({ ride, selected, onSelect, showStrike = true }: Props) => {
         )}
       </View>
       <View style={styles.fareWrap}>
-        <Text style={[styles.fare, selected && styles.textInverse]}>
+        <Text
+          style={[
+            styles.fare,
+            selected && styles.textInverse,
+            isSurging && !selected && styles.fareSurging,
+          ]}
+        >
           ₹{ride.fare}
         </Text>
         {showStrike ? (
@@ -329,7 +348,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   info: { flex: 1, minWidth: 0 },
-  nameRow: { flexDirection: 'row', alignItems: 'baseline', gap: fscale(6) },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: fscale(6),
+    flexWrap: 'wrap',
+    rowGap: 2,
+  },
   name: {
     fontSize: fscale(15),
     fontWeight: '700',
@@ -337,6 +362,21 @@ const styles = StyleSheet.create({
     color: Colors.ink,
   },
   seats: { fontSize: fscale(11), color: Colors.textSecondary },
+  surgeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(242,160,61,0.14)',
+    borderRadius: fscale(6),
+    paddingHorizontal: fscale(6),
+    paddingVertical: fscale(2),
+    marginLeft: 2,
+  },
+  surgeBadgeText: {
+    fontSize: fscale(9.5),
+    fontWeight: '700',
+    color: Colors.amber,
+  },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -352,6 +392,7 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     color: Colors.ink,
   },
+  fareSurging: { color: Colors.amber },
   fareStrike: {
     fontSize: fscale(10.5),
     color: Colors.textTertiary,

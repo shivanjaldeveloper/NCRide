@@ -9,6 +9,11 @@ interface Props {
   onPickupPress?: () => void;
   onDropPress?: () => void;
   onSwap?: () => void;
+  // True when the shown text is a placeholder ("Add pickup location") not
+  // a real chosen address — dims the text so it reads as a prompt rather
+  // than a confirmed selection, matching HomeScreen's own pickup/drop rows.
+  pickupIsPlaceholder?: boolean;
+  dropIsPlaceholder?: boolean;
 }
 
 /**
@@ -17,7 +22,15 @@ interface Props {
  * swap button, used on Ride/Book screens. RN port of the reference
  * `LocFieldStack`.
  */
-const LocFieldStack = ({ pickup, drop, onPickupPress, onDropPress, onSwap }: Props) => {
+const LocFieldStack = ({
+  pickup,
+  drop,
+  onPickupPress,
+  onDropPress,
+  onSwap,
+  pickupIsPlaceholder,
+  dropIsPlaceholder,
+}: Props) => {
   return (
     <View style={styles.wrap}>
       <TouchableOpacity
@@ -29,7 +42,13 @@ const LocFieldStack = ({ pickup, drop, onPickupPress, onDropPress, onSwap }: Pro
         <View style={styles.pickupDot} />
         <View style={styles.textWrap}>
           <Text style={styles.label}>PICKUP</Text>
-          <Text style={styles.value} numberOfLines={1}>
+          <Text
+            style={[
+              styles.value,
+              pickupIsPlaceholder && styles.valuePlaceholder,
+            ]}
+            numberOfLines={1}
+          >
             {pickup}
           </Text>
         </View>
@@ -46,12 +65,19 @@ const LocFieldStack = ({ pickup, drop, onPickupPress, onDropPress, onSwap }: Pro
         <View style={styles.dropDot} />
         <View style={styles.textWrap}>
           <Text style={styles.label}>DROP</Text>
-          <Text style={styles.value} numberOfLines={1}>
+          <Text
+            style={[styles.value, dropIsPlaceholder && styles.valuePlaceholder]}
+            numberOfLines={1}
+          >
             {drop}
           </Text>
         </View>
         {onSwap && (
-          <TouchableOpacity style={styles.swapBtn} activeOpacity={0.75} onPress={onSwap}>
+          <TouchableOpacity
+            style={styles.swapBtn}
+            activeOpacity={0.75}
+            onPress={onSwap}
+          >
             <Icon name="swap" size={16} stroke={Colors.ink} />
           </TouchableOpacity>
         )}
@@ -115,6 +141,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.ink,
     marginTop: 1,
+  },
+  valuePlaceholder: {
+    color: Colors.textTertiary,
+    fontWeight: '500',
   },
   swapBtn: {
     width: fscale(34),

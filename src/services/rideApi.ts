@@ -34,6 +34,15 @@ export interface RideModeEstimate {
   DiscountAmount: string;
   DiscountAmountText: string;
   DiscountPercentage: string;
+  // Post-discount, pre-surge fare — i.e. what FinalFare would be if no
+  // surge were currently active.
+  FareBeforeSurge: string;
+  FareBeforeSurgeText: string;
+  SurgeApplied: string; // "YES" | "NO"
+  SurgeMultiplier: string; // e.g. "1.5"
+  SurgeText: string; // e.g. "1.5x surge" — empty when SurgeApplied is "NO"
+  SurgeAmount: string;
+  SurgeAmountText: string;
   FinalFare: string;
   FinalFareText: string;
   DriverArrivalMinutes: string;
@@ -41,7 +50,7 @@ export interface RideModeEstimate {
   AvailableDrivers: string;
   Capacity: string;
   CapacityText: string;
-  Status: string; // "AVAILABLE" | ...
+  Status: string; // "AVAILABLE" | "UNAVAILABLE" | ...
 }
 
 export interface RideEstimateResponse {

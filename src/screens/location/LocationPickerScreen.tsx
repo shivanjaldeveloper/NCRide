@@ -8,6 +8,7 @@ import {
   TextInput,
   Keyboard,
   Animated,
+  Image,
 } from 'react-native';
 import RNMapView, { PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -70,6 +71,7 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
   const bestAutoAccuracyRef = useRef<number>(Number.MAX_SAFE_INTEGER);
   const autoRefineLockedRef = useRef(initialSource === 'manual');
   const pendingUseCurrentRef = useRef(false);
+  const hasAutoCenteredRef = useRef(false); // add this line
 
   const [address, setAddress] = useState(
     initialAddress ?? 'Move map to select',
@@ -171,7 +173,7 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
     blurTimer.current = setTimeout(() => setFocused(false), 150);
   };
 
-  const recenterMap = (lat: number, lng: number) => {
+  const recenterMap = (lat: number, lng: number, instant = false) => {
     mapRef.current?.animateToRegion(
       {
         latitude: lat,
@@ -179,7 +181,7 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
         latitudeDelta: REGION_DELTA,
         longitudeDelta: REGION_DELTA,
       },
-      600,
+      instant ? 0 : 600,
     );
   };
 
@@ -289,10 +291,12 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
       ) {
         bestAutoAccuracyRef.current = accuracy;
         sourceRef.current = 'gps';
+        const isFirstFix = !hasAutoCenteredRef.current;
+        hasAutoCenteredRef.current = true;
         console.log(
           `[LocationPicker] auto-refine → new best accuracy=${accuracy}m at lat=${lat}, lng=${lng}`,
         );
-        recenterMap(lat, lng);
+        recenterMap(lat, lng, isFirstFix);
         scheduleGeocode(lat, lng, accuracy);
         if (accuracy <= GOOD_ACCURACY_M) {
           autoRefineLockedRef.current = true;
@@ -456,15 +460,11 @@ const LocationPickerScreen = ({ navigation, route }: Props) => {
           it doesn't collide with the results list */}
       {!showDropdown && (
         <View style={styles.tooltipWrap} pointerEvents="none">
-          <View style={styles.tooltipBubble}>
-            <Text style={styles.tooltipText}>
-              {isPickup ? "You'll be picked up here" : "You'll be dropped here"}
-            </Text>
-            <Text style={styles.tooltipSub}>
-              Move pin to your exact location
-            </Text>
-          </View>
-          <View style={styles.tooltipArrow} />
+          <Image
+            source={require('../../assets/images/location.png')}
+            style={styles.tooltipIcon}
+            resizeMode="contain"
+          />
         </View>
       )}
 
@@ -842,6 +842,10 @@ const styles = StyleSheet.create({
   },
 
   // Tooltip callout above the pin
+  tooltipIcon: {
+    width: fscale(30),
+    height: fscale(38),
+  },
   tooltipWrap: {
     position: 'absolute',
     left: 0,
@@ -856,6 +860,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: fscale(14),
     paddingVertical: fscale(9),
     maxWidth: '76%',
+  },
+  tooltipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: fscale(7),
+  },
+  tooltipMarker: {
+    width: fscale(14),
+    height: fscale(14),
+    borderTopLeftRadius: fscale(7),
+    borderTopRightRadius: fscale(7),
+    borderBottomRightRadius: fscale(7),
+    borderBottomLeftRadius: 0,
+    backgroundColor: Colors.red,
+    transform: [{ rotate: '-45deg' }],
   },
   tooltipText: {
     fontSize: fscale(12.5),

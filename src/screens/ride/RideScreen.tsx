@@ -56,48 +56,70 @@ const numOrUndefined = (v: string | undefined): number | undefined => {
 // Maps one live estimate mode straight onto the RideCard's existing
 // RideOption shape — nothing in RideCard/RideOption needed to change
 // structurally, just the extra optional fields added for real fare/
-// discount/availability data.
-const modeToRideOption = (m: RideModeEstimate): RideOption => ({
-  id: m.ModeCode,
-  name: m.ModeName,
-  tag: m.CapacityText,
-  eta: m.DriverArrivalText,
-  fare: numOrUndefined(m.FinalFare) ?? 0,
-  max: numOrUndefined(m.Capacity) ?? 0,
-  glyph: glyphForModeCode(m.ModeCode),
-  originalFare: numOrUndefined(m.OriginalFare),
-  discountText: m.DiscountAmountText,
-  driversAvailable: numOrUndefined(m.AvailableDrivers),
-  available: m.Status === 'AVAILABLE',
-});
+// discount/availability/surge data.
+const modeToRideOption = (m: RideModeEstimate): RideOption => {
+  const surgeActive = m.SurgeApplied === 'YES';
+  return {
+    id: m.ModeCode,
+    name: m.ModeName,
+    tag: m.CapacityText,
+    eta: m.DriverArrivalText,
+    fare: numOrUndefined(m.FinalFare) ?? 0,
+    max: numOrUndefined(m.Capacity) ?? 0,
+    glyph: glyphForModeCode(m.ModeCode),
+    originalFare: numOrUndefined(m.OriginalFare),
+    discountText: m.DiscountAmountText,
+    driversAvailable: numOrUndefined(m.AvailableDrivers),
+    available: m.Status === 'AVAILABLE',
+    // Only set when the API actually says surge is active — an inactive/
+    // absent surge never shows a badge, never changes the fare color.
+    surgeActive,
+    surgeText: surgeActive
+      ? m.SurgeText || `${m.SurgeMultiplier}x surge`
+      : undefined,
+  };
+};
 
 const RideScreen = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
   const mode: Mode = route.params?.mode === 'erickshaw' ? 'erickshaw' : 'auto';
   const meta = {
-    auto: { ...t.ride.auto, defaultDrop: 'Connaught Place, Delhi' },
-    erickshaw: { ...t.ride.erickshaw, defaultDrop: 'Botanical Garden Metro' },
+    auto: t.ride.auto,
+    erickshaw: t.ride.erickshaw,
   }[mode];
 
   // Seeded from whatever HomeScreen's location picker resolved (address +
-  // real lat/lng) — falls back to a plain address-only point (no
-  // coordinates) if this screen was opened without a prior pick.
-  // Coordinates are what unlocks the ride-estimate call below (map
-  // markers, route line, live fares — all come from that one response).
-  const [pickup, setPickup] = useState<LocationPoint>({
-    address: route.params?.pickup || 'Current Location',
-    lat: route.params?.pickupLat ?? 0,
-    lng: route.params?.pickupLng ?? 0,
-  });
-  const [drop, setDrop] = useState<LocationPoint>({
-    address: route.params?.drop || meta.defaultDrop,
-    lat: route.params?.dropLat ?? 0,
-    lng: route.params?.dropLng ?? 0,
-  });
+  // real lat/lng) — but ONLY when both were actually provided. Previously
+  // this fell back to a fake "Current Location" / demo address (e.g.
+  // "Connaught Place, Delhi") even when nothing had really been chosen —
+  // misleading, since it looked like a real selection. Now: not chosen ⇒
+  // null, and the UI below shows a real "Add pickup/drop location" prompt
+  // instead of a fake address. This matters because Home's Services row
+  // (Auto/E-Rickshaw tiles) can land here with NEITHER location set yet.
+  const seedPoint = (
+    lat: number | undefined,
+    lng: number | undefined,
+    address: string | undefined,
+  ): LocationPoint | null =>
+    typeof lat === 'number' && typeof lng === 'number'
+      ? { address: address || `${lat.toFixed(5)}, ${lng.toFixed(5)}`, lat, lng }
+      : null;
+
+  const [pickup, setPickup] = useState<LocationPoint | null>(
+    seedPoint(
+      route.params?.pickupLat,
+      route.params?.pickupLng,
+      route.params?.pickup,
+    ),
+  );
+  const [drop, setDrop] = useState<LocationPoint | null>(
+    seedPoint(route.params?.dropLat, route.params?.dropLng, route.params?.drop),
+  );
   const [selected, setSelected] = useState<RideOption | undefined>(undefined);
 
-  const hasPickupCoord = pickup.lat !== 0 && pickup.lng !== 0;
-  const hasDropCoord = drop.lat !== 0 && drop.lng !== 0;
+  const hasPickupCoord = !!pickup;
+  const hasDropCoord = !!drop;
+  const bothLocationsChosen = hasPickupCoord && hasDropCoord;
 
   // ── Ride estimate — one call gets pickup/drop confirmation, the route
   // (distance/duration + the exact polyline the fares were priced against),
@@ -106,23 +128,31 @@ const RideScreen = ({ navigation, route }: Props) => {
   const [estimate, setEstimate] = useState<RideEstimateResponse | null>(null);
   const [loadingEstimate, setLoadingEstimate] = useState(false);
   const [estimateError, setEstimateError] = useState<string | null>(null);
+  // Small explanatory note shown only when the mode this screen was opened
+  // for (Auto / E-Rickshaw) turned out to be unavailable on this route, so
+  // the person understands why a different card got selected instead.
+  const [unavailableNotice, setUnavailableNotice] = useState<string | null>(
+    null,
+  );
 
   useEffect(() => {
-    if (!hasPickupCoord || !hasDropCoord) {
+    if (!pickup || !drop) {
       if (__DEV__) {
         console.log(
-          '[RideScreen] Skipping getRideEstimate — missing coordinate(s):',
-          { pickup, drop, hasPickupCoord, hasDropCoord },
+          '[RideScreen] Skipping getRideEstimate — pickup and/or drop not chosen yet:',
+          { pickup, drop },
         );
       }
       setEstimate(null);
       setEstimateError(null);
+      setUnavailableNotice(null);
       return;
     }
     let cancelled = false;
     (async () => {
       setLoadingEstimate(true);
       setEstimateError(null);
+      setUnavailableNotice(null);
       try {
         const cookie = (await getSessionCookie()) ?? '';
         if (__DEV__) {
@@ -156,18 +186,28 @@ const RideScreen = ({ navigation, route }: Props) => {
           });
         }
         setEstimate(result);
-        // Preselect the first AVAILABLE mode (matching this screen's
-        // auto/erickshaw entry point when possible) rather than leaving
-        // nothing chosen.
+        // Preselect whichever mode this screen was opened for (Auto /
+        // E-Rickshaw) — but ONLY if the backend says it's actually
+        // AVAILABLE. If it's unavailable (or not offered on this route at
+        // all), fall back to the literal first card in the list — not
+        // "first available", not any other specific mode — and surface a
+        // small note explaining why, instead of silently switching modes.
         const modes = result.Modes ?? [];
         const preferredCode = mode === 'erickshaw' ? 'ERICKSHAW' : 'AUTO';
-        const preferred =
-          modes.find(
-            m => m.ModeCode === preferredCode && m.Status === 'AVAILABLE',
-          ) ??
-          modes.find(m => m.Status === 'AVAILABLE') ??
-          modes[0];
-        setSelected(preferred ? modeToRideOption(preferred) : undefined);
+        const preferredMode = modes.find(m => m.ModeCode === preferredCode);
+        const preferredAvailable = preferredMode?.Status === 'AVAILABLE';
+
+        if (preferredAvailable && preferredMode) {
+          setSelected(modeToRideOption(preferredMode));
+          setUnavailableNotice(null);
+        } else {
+          setSelected(modes[0] ? modeToRideOption(modes[0]) : undefined);
+          setUnavailableNotice(
+            preferredMode
+              ? `${preferredMode.ModeName} is not available right now — showing other options.`
+              : null,
+          );
+        }
       } catch (err) {
         if (cancelled) return;
         if (__DEV__) {
@@ -177,6 +217,7 @@ const RideScreen = ({ navigation, route }: Props) => {
         setEstimateError(
           isRideApiError(err) ? err.message : 'Could not fetch ride estimate.',
         );
+        setUnavailableNotice(null);
       } finally {
         if (!cancelled) setLoadingEstimate(false);
       }
@@ -185,14 +226,7 @@ const RideScreen = ({ navigation, route }: Props) => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    pickup.lat,
-    pickup.lng,
-    drop.lat,
-    drop.lng,
-    hasPickupCoord,
-    hasDropCoord,
-  ]);
+  }, [pickup?.lat, pickup?.lng, drop?.lat, drop?.lng]);
 
   const rideOptions: RideOption[] = useMemo(
     () => (estimate?.Modes ?? []).map(modeToRideOption),
@@ -217,12 +251,12 @@ const RideScreen = ({ navigation, route }: Props) => {
   // params.
   const openPicker = (field: 'pickup' | 'drop') => {
     const point = field === 'pickup' ? pickup : drop;
-    (navigation.getParent()?.navigate as any)('LocationPicker', {
+    (navigation.navigate as any)('LocationPicker', {
       field,
-      initialLat: point.lat !== 0 ? point.lat : undefined,
-      initialLng: point.lng !== 0 ? point.lng : undefined,
-      initialAddress: point.address,
-      initialSource: point.lat !== 0 ? 'manual' : undefined,
+      initialLat: point?.lat,
+      initialLng: point?.lng,
+      initialAddress: point?.address,
+      initialSource: point ? 'manual' : undefined,
       onPick: (result: {
         address: string;
         lat: number;
@@ -265,21 +299,20 @@ const RideScreen = ({ navigation, route }: Props) => {
           // chips were redundant clutter over the route line.
           showRoute={false}
           showControls={false}
-          pickup={pickup.address}
-          drop={drop.address}
+          pickup={pickup?.address}
+          drop={drop?.address}
           pickupCoord={
-            hasPickupCoord
-              ? { latitude: pickup.lat, longitude: pickup.lng }
-              : undefined
+            pickup ? { latitude: pickup.lat, longitude: pickup.lng } : undefined
           }
           dropCoord={
-            hasDropCoord
-              ? { latitude: drop.lat, longitude: drop.lng }
-              : undefined
+            drop ? { latitude: drop.lat, longitude: drop.lng } : undefined
           }
           // The exact route the backend priced the fares against — drawn
-          // as-is, no separate client-side route calculation.
+          // as-is, no separate client-side route calculation. If the API
+          // didn't send a polyline (missing/empty), no line is drawn at
+          // all — externalRouteOnly disables MapView's own OSRM fallback.
           externalRouteCoords={routeCoords}
+          externalRouteOnly
           routeColor={estimate?.Route?.PolylineColor}
           routeWidth={numOrUndefined(estimate?.Route?.PolylineWidth)}
         />
@@ -301,56 +334,87 @@ const RideScreen = ({ navigation, route }: Props) => {
             </View>
           )}
           <LocFieldStack
-            pickup={pickup.address}
-            drop={drop.address}
+            pickup={pickup?.address ?? 'Add pickup location'}
+            drop={drop?.address ?? 'Add drop location'}
+            pickupIsPlaceholder={!pickup}
+            dropIsPlaceholder={!drop}
             onPickupPress={() => openPicker('pickup')}
             onDropPress={() => openPicker('drop')}
             onSwap={handleSwap}
           />
-          <View style={styles.chooseRow}>
-            <Text style={styles.chooseLabel}>{t.ride.chooseRide}</Text>
-            <Text style={styles.chooseMeta}>
-              {estimate?.Route
-                ? `${estimate.Route.DistanceKM} km · ${estimate.Route.DurationMinutes} min`
-                : loadingEstimate
-                ? 'Calculating…'
-                : '— km · — min'}
-            </Text>
-          </View>
 
-          {loadingEstimate && rideOptions.length === 0 && (
-            <View style={styles.stateRow}>
-              <ActivityIndicator size="small" color={Colors.textTertiary} />
-              <Text style={styles.stateText}>Fetching ride options…</Text>
-            </View>
-          )}
-
-          {!loadingEstimate && estimateError && (
-            <View style={styles.stateRow}>
-              <Icon name="sos" size={16} stroke={Colors.red} />
-              <Text style={styles.stateTextError}>{estimateError}</Text>
-            </View>
-          )}
-
-          {!loadingEstimate && !estimateError && rideOptions.length === 0 && (
-            <View style={styles.stateRow}>
-              <Text style={styles.stateText}>
-                No ride options available for this route right now.
+          {!bothLocationsChosen ? (
+            // Landed here (e.g. from Home's Services row — Auto/E-Rickshaw
+            // tiles) without a pickup and/or drop already chosen. Nothing
+            // to estimate yet — prompt clearly instead of silently showing
+            // an empty/misleading ride list.
+            <View style={styles.chooseLocationPrompt}>
+              <View style={styles.chooseLocationIconWrap}>
+                <Icon name="pin" size={18} stroke={Colors.textSecondary} />
+              </View>
+              <Text style={styles.chooseLocationText}>
+                Add pickup & destination to find a ride
               </Text>
             </View>
-          )}
+          ) : (
+            <>
+              <View style={styles.chooseRow}>
+                <Text style={styles.chooseLabel}>{t.ride.chooseRide}</Text>
+                <Text style={styles.chooseMeta}>
+                  {estimate?.Route
+                    ? `${estimate.Route.DistanceKM} km · ${estimate.Route.DurationMinutes} min`
+                    : loadingEstimate
+                    ? 'Calculating…'
+                    : '— km · — min'}
+                </Text>
+              </View>
 
-          <View style={styles.rideList}>
-            {rideOptions.map(r => (
-              <RideCard
-                key={r.id}
-                ride={r}
-                selected={selected?.id === r.id}
-                onSelect={setSelected}
-                showStrike
-              />
-            ))}
-          </View>
+              {unavailableNotice && (
+                <View style={styles.stateRow}>
+                  <Icon name="sos" size={14} stroke={Colors.amber} />
+                  <Text style={styles.unavailableNoticeText}>
+                    {unavailableNotice}
+                  </Text>
+                </View>
+              )}
+
+              {loadingEstimate && rideOptions.length === 0 && (
+                <View style={styles.stateRow}>
+                  <ActivityIndicator size="small" color={Colors.textTertiary} />
+                  <Text style={styles.stateText}>Fetching ride options…</Text>
+                </View>
+              )}
+
+              {!loadingEstimate && estimateError && (
+                <View style={styles.stateRow}>
+                  <Icon name="sos" size={16} stroke={Colors.red} />
+                  <Text style={styles.stateTextError}>{estimateError}</Text>
+                </View>
+              )}
+
+              {!loadingEstimate &&
+                !estimateError &&
+                rideOptions.length === 0 && (
+                  <View style={styles.stateRow}>
+                    <Text style={styles.stateText}>
+                      No ride options available for this route right now.
+                    </Text>
+                  </View>
+                )}
+
+              <View style={styles.rideList}>
+                {rideOptions.map(r => (
+                  <RideCard
+                    key={r.id}
+                    ride={r}
+                    selected={selected?.id === r.id}
+                    onSelect={setSelected}
+                    showStrike
+                  />
+                ))}
+              </View>
+            </>
+          )}
           <TouchableOpacity style={styles.couponRow} activeOpacity={0.8}>
             <View style={styles.couponIconWrap}>
               <Icon name="coupon" size={16} stroke={Colors.textSecondary} />
@@ -457,6 +521,33 @@ const styles = StyleSheet.create({
   },
   stateText: { fontSize: fscale(12), color: Colors.textSecondary },
   stateTextError: { fontSize: fscale(12), color: '#D64545' },
+  unavailableNoticeText: { fontSize: fscale(12), color: Colors.amber, flex: 1 },
+  chooseLocationPrompt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
+    padding: Spacing.md,
+    backgroundColor: Colors.bgWhite,
+    borderRadius: Radii.lg,
+    borderWidth: 0.5,
+    borderColor: Colors.border,
+  },
+  chooseLocationIconWrap: {
+    width: fscale(36),
+    height: fscale(36),
+    borderRadius: Radii.md,
+    backgroundColor: Colors.bgOffWhite,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  chooseLocationText: {
+    flex: 1,
+    fontSize: fscale(12.5),
+    fontWeight: '500',
+    color: Colors.textSecondary,
+  },
   rideList: { gap: Spacing.sm },
   couponRow: {
     flexDirection: 'row',

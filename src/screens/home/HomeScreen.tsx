@@ -493,7 +493,7 @@ const HomeScreen = ({ navigation }: Props) => {
             onPress={() => goRide('auto')}
           >
             <Icon name="taxi" size={20} stroke={Colors.lime} sw={1.7} />
-            <Text style={styles.bookBtnText}>{t.home.book} Auto</Text>
+            <Text style={styles.bookBtnText}>{t.home.book} Ride</Text>
             <Icon name="arrowRight" size={18} stroke={Colors.lime} sw={2} />
           </TouchableOpacity>
         ) : (

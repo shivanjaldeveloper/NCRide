@@ -115,7 +115,9 @@ const tryPlacesAutocompleteNew = async (
     if (json.error) {
       logTierIssue(
         'placesAutocompleteNew',
-        `${json.error.status ?? res.status} — ${json.error.message ?? 'unknown error'}`,
+        `${json.error.status ?? res.status} — ${
+          json.error.message ?? 'unknown error'
+        }`,
       );
       return [];
     }
@@ -185,18 +187,21 @@ const tryPlacesNearbyNew = async (
     if (json.error) {
       logTierIssue(
         'placesNearbyNew',
-        `${json.error.status ?? res.status} — ${json.error.message ?? 'unknown error'}`,
+        `${json.error.status ?? res.status} — ${
+          json.error.message ?? 'unknown error'
+        }`,
       );
       return null;
     }
     if (Array.isArray(json.places) && json.places.length > 0) {
       const p = json.places[0];
       const name: string | undefined = p.displayName?.text;
+      const coordLabel = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
       const shortName =
         name ||
         p.shortFormattedAddress?.split(',')[0] ||
         p.formattedAddress?.split(',')[0] ||
-        'Current location';
+        coordLabel;
       const address =
         dedupJoin([name, p.formattedAddress]) ||
         p.formattedAddress ||
@@ -237,17 +242,22 @@ export const getPlaceDetails = async (
     if (json.error) {
       logTierIssue(
         'placeDetailsNew',
-        `${json.error.status ?? res.status} — ${json.error.message ?? 'unknown error'}`,
+        `${json.error.status ?? res.status} — ${
+          json.error.message ?? 'unknown error'
+        }`,
       );
       return null;
     }
     if (json.location) {
       const name: string | undefined = json.displayName?.text;
+      const coordLabel = `${json.location.latitude.toFixed(
+        5,
+      )}, ${json.location.longitude.toFixed(5)}`;
       const shortName =
         name ||
         json.shortFormattedAddress?.split(',')[0] ||
         json.formattedAddress?.split(',')[0] ||
-        'Selected location';
+        coordLabel;
       const address =
         dedupJoin([name, json.formattedAddress]) ||
         json.formattedAddress ||
@@ -411,13 +421,14 @@ export const reverseGeocode = async (
     return nominatim;
   }
 
+  const coordLabel = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
   logInfo(
     'reverseGeocode',
-    'ALL TIERS FAILED — falling back to "Current location"',
+    `ALL TIERS FAILED — falling back to raw coordinates "${coordLabel}"`,
   );
   return {
-    address: 'Current location',
-    shortName: 'Current location',
+    address: coordLabel,
+    shortName: coordLabel,
     lat,
     lng,
   };

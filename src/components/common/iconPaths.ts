@@ -75,6 +75,8 @@ export const ICONS: Record<string, string> = {
   hand: 'M9 13V5a2 2 0 1 1 4 0v6M13 11V4a2 2 0 1 1 4 0v8M9 11V7a2 2 0 1 0-4 0v9a6 6 0 0 0 12 0v-2',
   trash: 'M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M6 7l1 13h10l1-13',
   wifi: 'M1 7C5 3 19 3 23 7M5 11c1.9-1.9 12.1-1.9 14 0M9 15c.9-.9 6.1-.9 7 0M12 19h.01',
+  bolt: 'M13 2L4 14h6l-1 8 9-12h-6z',
+  boltFill: 'M13 2L4 14h6l-1 8 9-12h-6z',
 };
 
 export type IconName = keyof typeof ICONS;
