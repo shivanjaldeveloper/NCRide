@@ -147,7 +147,7 @@ const Glyph = ({ glyph }: { glyph: RideGlyph }) => {
             cy={30}
             r={6}
             fill="none"
-            stroke="#0F1115"
+            stroke="#F2A03D"
             strokeWidth={3}
           />
           <Circle
@@ -155,23 +155,30 @@ const Glyph = ({ glyph }: { glyph: RideGlyph }) => {
             cy={30}
             r={6}
             fill="none"
-            stroke="#0F1115"
+            stroke="#F2A03D"
             strokeWidth={3}
           />
           <Path
             d="M14 30 L26 18 L44 18 L50 30"
             fill="none"
-            stroke="#0F1115"
+            stroke="#F2A03D"
             strokeWidth={3}
             strokeLinecap="round"
           />
           <Path
             d="M44 18 L40 10"
-            stroke="#0F1115"
+            stroke="#F2A03D"
             strokeWidth={3}
             strokeLinecap="round"
           />
-          <Rect x={28} y={14} width={14} height={6} fill="#2E7DFF" />
+          <Rect
+            x={28}
+            y={14}
+            width={14}
+            height={6}
+            fill="#F2A03D"
+            opacity={0.85}
+          />
         </Svg>
       );
     case 'erickshaw':

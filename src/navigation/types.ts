@@ -1,3 +1,5 @@
+import type { IconName } from '../components/common/iconPaths';
+
 export type RootStackParamList = {
   Splash: undefined;
   Onboarding: undefined;
@@ -35,7 +37,7 @@ export type RootStackParamList = {
   };
   Ride:
     | {
-        mode?: 'auto' | 'erickshaw';
+        mode?: 'auto' | 'erickshaw' | 'bike';
         pickup?: string;
         drop?: string;
         // Real coordinates from HomeScreen's resolved pickup/drop points —
@@ -47,20 +49,97 @@ export type RootStackParamList = {
         dropLng?: number;
       }
     | undefined;
-  Driver: undefined;
-  Tracking: undefined;
-  Completed: undefined;
+  // Shown right after CreateRide, while Status === "SEARCHING". Polls
+  // GetRideStatus every few seconds and hands off to Driver once a driver
+  // is attached, or shows a cancelled/failed state otherwise.
+  Searching: {
+    rideTran: string;
+    vehicleType: string;
+    vehicleName?: string;
+    pickup: string;
+    pickupLat: number;
+    pickupLng: number;
+    drop: string;
+    dropLat: number;
+    dropLng: number;
+    routePolyline?: string;
+    routeColor?: string;
+    routeWidth?: number;
+    fareText: string;
+  };
+  // `undefined` kept for backwards-compat with any existing callers that
+  // navigate here directly (e.g. dev shortcuts); SearchingScreen always
+  // passes the full ride context once a driver is attached. DriverScreen
+  // itself then polls GetRideStatus and refreshes StartOTP/Driver as they
+  // arrive, and forwards the same shape (with fresher values) to Tracking.
+  Driver:
+    | {
+        rideTran?: string;
+        vehicleType?: string;
+        pickup?: string;
+        pickupLat?: number;
+        pickupLng?: number;
+        drop?: string;
+        dropLat?: number;
+        dropLng?: number;
+        routePolyline?: string;
+        routeColor?: string;
+        routeWidth?: number;
+        fareText?: string;
+        // From GetRideStatus once Status is ACCEPTED — real OTP, never a
+        // placeholder.
+        startOtp?: string;
+        driverName?: string;
+        driverMobile?: string;
+        vehicleModel?: string;
+        vehicleNumber?: string;
+      }
+    | undefined;
+  // Passed by DriverScreen once GetRideStatus reports Status "ONGOING".
+  Tracking:
+    | {
+        rideTran?: string;
+        vehicleType?: string;
+        pickup?: string;
+        pickupLat?: number;
+        pickupLng?: number;
+        drop?: string;
+        dropLat?: number;
+        dropLng?: number;
+        routePolyline?: string;
+        routeColor?: string;
+        routeWidth?: number;
+        fareText?: string;
+        driverName?: string;
+        vehicleModel?: string;
+        vehicleNumber?: string;
+      }
+    | undefined;
+  // Passed by TrackingScreen once GetRideStatus reports Status "COMPLETED".
+  Completed:
+    | {
+        distanceKm?: string;
+        durationMin?: string;
+        pickup?: string;
+        drop?: string;
+        fareText?: string;
+        driverName?: string;
+        vehicleModel?: string;
+        vehicleNumber?: string;
+      }
+    | undefined;
   Chat: undefined;
   SOS: undefined;
-  Invoice: undefined;
-  PayRide: undefined;
-  Receipt: undefined;
   InvoiceReceipt: undefined;
   Courier: undefined;
   CourierSummary: undefined;
   CourierPayment: undefined;
   CourierConfirmed: undefined;
-  BookingDetail: { id: string; title: string; icon?: string };
+  // `rideTran` drives the GetRideStatus call on this screen — `title`/
+  // `icon` are passed through purely so the header/summary can render
+  // instantly (from the Activity list item) instead of waiting on the
+  // network round-trip.
+  BookingDetail: { rideTran: string; title?: string; icon?: IconName };
   Coupons: undefined;
   Rewards: undefined;
   Notifications: undefined;

@@ -20,13 +20,14 @@ import { getSessionCookie } from '../../utils/auth';
 import { decodePolyline } from '../../utils/polyline';
 import {
   getRideEstimate,
+  createRide,
   isRideApiError,
   type RideEstimateResponse,
   type RideModeEstimate,
 } from '../../services/rideApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Ride'>;
-type Mode = 'auto' | 'erickshaw';
+type Mode = 'auto' | 'erickshaw' | 'bike';
 
 type LocationPoint = {
   address: string;
@@ -82,8 +83,15 @@ const modeToRideOption = (m: RideModeEstimate): RideOption => {
 
 const RideScreen = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
-  const mode: Mode = route.params?.mode === 'erickshaw' ? 'erickshaw' : 'auto';
+  // Distinct from `mode` below: undefined here means "opened via the plain
+  // Book button — no specific vehicle requested", NOT "defaults to auto".
+  // Only Services row taps (Auto/E-Rickshaw tiles) set this explicitly.
+  const explicitMode: Mode | undefined = route.params?.mode;
+  // Display-only fallback for the header title/sub/cta and eco banner —
+  // just needs *some* copy to show, doesn't imply a selection preference.
+  const mode: Mode = explicitMode ?? 'auto';
   const meta = {
+    bike: t.ride.bike,
     auto: t.ride.auto,
     erickshaw: t.ride.erickshaw,
   }[mode];
@@ -134,6 +142,64 @@ const RideScreen = ({ navigation, route }: Props) => {
   const [unavailableNotice, setUnavailableNotice] = useState<string | null>(
     null,
   );
+
+  // ── Create ride — fires when the person taps Request on their chosen
+  // mode. Needs a still-valid EstimateTran from the getRideEstimate call
+  // above, plus the selected mode's ModeCode as vehicleType. On success
+  // hands off to SearchingScreen (Status starts out "SEARCHING"), which
+  // takes over polling GetRideStatus from there. ─────────────────────────
+  const [requesting, setRequesting] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+
+  const handleRequest = async () => {
+    if (!selected || !estimate || !pickup || !drop || requesting) return;
+    setRequesting(true);
+    setRequestError(null);
+    try {
+      const cookie = (await getSessionCookie()) ?? '';
+      if (__DEV__) {
+        console.log('[RideScreen] Creating ride:', {
+          estimateTran: estimate.EstimateTran,
+          vehicleType: selected.id,
+        });
+      }
+      const result = await createRide({
+        cookie,
+        estimateTran: estimate.EstimateTran,
+        vehicleType: selected.id,
+      });
+      if (__DEV__) {
+        console.log('[RideScreen] Ride created:', {
+          rideTran: result.RideTran,
+          status: result.Status,
+        });
+      }
+      navigation.navigate('Searching', {
+        rideTran: result.RideTran,
+        vehicleType: result.VehicleType || selected.id,
+        vehicleName: result.VehicleName || selected.name,
+        pickup: result.Pickup?.Address || pickup.address,
+        pickupLat: numOrUndefined(result.Pickup?.Latitude) ?? pickup.lat,
+        pickupLng: numOrUndefined(result.Pickup?.Longitude) ?? pickup.lng,
+        drop: result.Drop?.Address || drop.address,
+        dropLat: numOrUndefined(result.Drop?.Latitude) ?? drop.lat,
+        dropLng: numOrUndefined(result.Drop?.Longitude) ?? drop.lng,
+        routePolyline: result.Route?.EncodedPolyline,
+        routeColor: result.Route?.PolylineColor,
+        routeWidth: numOrUndefined(result.Route?.PolylineWidth),
+        fareText: result.Fare?.FinalFareText || selected.fare.toString(),
+      });
+    } catch (err) {
+      if (__DEV__) {
+        console.warn('[RideScreen] createRide failed:', err);
+      }
+      setRequestError(
+        isRideApiError(err) ? err.message : 'Could not request a ride. Please try again.',
+      );
+    } finally {
+      setRequesting(false);
+    }
+  };
 
   useEffect(() => {
     if (!pickup || !drop) {
@@ -186,27 +252,41 @@ const RideScreen = ({ navigation, route }: Props) => {
           });
         }
         setEstimate(result);
-        // Preselect whichever mode this screen was opened for (Auto /
-        // E-Rickshaw) — but ONLY if the backend says it's actually
-        // AVAILABLE. If it's unavailable (or not offered on this route at
-        // all), fall back to the literal first card in the list — not
-        // "first available", not any other specific mode — and surface a
-        // small note explaining why, instead of silently switching modes.
+        // Preselect whichever mode this screen was explicitly opened for
+        // (Services row → Auto/E-Rickshaw tile) — but ONLY if the backend
+        // says it's actually AVAILABLE. If it's unavailable (or not offered
+        // on this route at all), fall back to the literal first card in
+        // the list and surface a small note explaining why.
+        //
+        // When NO mode was explicitly requested (plain "Book" button on
+        // Home), skip preference-chasing entirely — always just the first
+        // card, no exceptions.
         const modes = result.Modes ?? [];
-        const preferredCode = mode === 'erickshaw' ? 'ERICKSHAW' : 'AUTO';
-        const preferredMode = modes.find(m => m.ModeCode === preferredCode);
-        const preferredAvailable = preferredMode?.Status === 'AVAILABLE';
 
-        if (preferredAvailable && preferredMode) {
-          setSelected(modeToRideOption(preferredMode));
-          setUnavailableNotice(null);
+        if (explicitMode) {
+          const preferredCode =
+            explicitMode === 'erickshaw'
+              ? 'ERICKSHAW'
+              : explicitMode === 'bike'
+              ? 'BIKE'
+              : 'AUTO';
+          const preferredMode = modes.find(m => m.ModeCode === preferredCode);
+          const preferredAvailable = preferredMode?.Status === 'AVAILABLE';
+
+          if (preferredAvailable && preferredMode) {
+            setSelected(modeToRideOption(preferredMode));
+            setUnavailableNotice(null);
+          } else {
+            setSelected(modes[0] ? modeToRideOption(modes[0]) : undefined);
+            setUnavailableNotice(
+              preferredMode
+                ? `${preferredMode.ModeName} is not available right now — showing other options.`
+                : null,
+            );
+          }
         } else {
           setSelected(modes[0] ? modeToRideOption(modes[0]) : undefined);
-          setUnavailableNotice(
-            preferredMode
-              ? `${preferredMode.ModeName} is not available right now — showing other options.`
-              : null,
-          );
+          setUnavailableNotice(null);
         }
       } catch (err) {
         if (cancelled) return;
@@ -427,6 +507,12 @@ const RideScreen = ({ navigation, route }: Props) => {
           </TouchableOpacity>
         </ScrollView>
         <View style={styles.footer}>
+          {requestError && (
+            <View style={[styles.stateRow, styles.requestErrorRow]}>
+              <Icon name="sos" size={14} stroke={Colors.red} />
+              <Text style={styles.stateTextError}>{requestError}</Text>
+            </View>
+          )}
           <View style={styles.footerDivider} />
           <View style={styles.bottomRow}>
             <TouchableOpacity style={styles.cashBtn} activeOpacity={0.8}>
@@ -440,12 +526,16 @@ const RideScreen = ({ navigation, route }: Props) => {
             </TouchableOpacity>
             <View style={{ flex: 1 }}>
               <NCButton
-                label={`${t.ride.request} ${selected?.name ?? meta.cta}`}
+                label={
+                  requesting
+                    ? t.ride.requesting
+                    : `${t.ride.request} ${selected?.name ?? meta.cta}`
+                }
                 iconRight="arrowRight"
-                onPress={() => navigation.navigate('Driver')}
+                onPress={handleRequest}
                 variant="primary"
                 size="lg"
-                disabled={!selected}
+                disabled={!selected || requesting}
               />
             </View>
           </View>
@@ -520,7 +610,8 @@ const styles = StyleSheet.create({
     paddingVertical: fscale(10),
   },
   stateText: { fontSize: fscale(12), color: Colors.textSecondary },
-  stateTextError: { fontSize: fscale(12), color: '#D64545' },
+  stateTextError: { fontSize: fscale(12), color: '#D64545', flex: 1 },
+  requestErrorRow: { paddingHorizontal: Spacing.md, paddingTop: Spacing.sm },
   unavailableNoticeText: { fontSize: fscale(12), color: Colors.amber, flex: 1 },
   chooseLocationPrompt: {
     flexDirection: 'row',

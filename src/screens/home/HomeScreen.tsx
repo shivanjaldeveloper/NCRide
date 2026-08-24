@@ -12,6 +12,7 @@ import {
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { BottomTabScreenProps } from '@react-navigation/bottom-tabs';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { TopSafeStrap } from '../../components/layout';
 import { Icon } from '../../components/common';
 import { MapView } from '../../components/map';
@@ -31,6 +32,7 @@ import {
 } from '../../theme';
 import { useTranslation } from '../../i18n';
 import { reverseGeocode } from '../../utils/geocode';
+import { getName } from '../../utils/auth';
 import {
   checkFullLocationStatus,
   type LocationStatus,
@@ -51,9 +53,9 @@ type LocationPoint = {
   source: 'gps' | 'manual';
 };
 
-const SERVICE_ICONS: IconName[] = ['taxi', 'car', 'courier'];
-const SERVICE_BG = ['#FEF6E4', '#E0FAFD', '#FFE9DC'];
-const SERVICE_IDS = ['auto', 'erickshaw', 'courier'];
+const SERVICE_ICONS: IconName[] = ['bike', 'taxi', 'car', 'courier'];
+const SERVICE_BG = ['#EAF7E6', '#FEF6E4', '#E0FAFD', '#FFE9DC'];
+const SERVICE_IDS = ['bike', 'auto', 'erickshaw', 'courier'];
 const QUICK_ACTION_ICONS: IconName[] = ['coupon', 'reward', 'refer'];
 const QUICK_ACTION_IDS = ['coupons', 'rewards', 'refer'];
 
@@ -91,6 +93,26 @@ const RECENT_RIDES: {
   },
 ];
 
+// Builds the 1-2 letter avatar initials from the logged-in user's name
+// (e.g. "Priyankar Bhomwik" -> "PB", "Priyankar" -> "P"). Falls back to a
+// generic mark if no name is on file yet. Same helper used in AccountScreen.
+const getInitials = (name: string): string => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '—';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+// Time-of-day greeting — recomputed on each render, no need for its own state.
+const getTimeGreeting = (): string => {
+  const hour = new Date().getHours();
+  if (hour < 5) return 'Good night';
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  if (hour < 21) return 'Good evening';
+  return 'Good night';
+};
+
 const HomeScreen = ({ navigation }: Props) => {
   const { t } = useTranslation();
   const [pickup, setPickup] = useState<LocationPoint | null>(null);
@@ -122,6 +144,29 @@ const HomeScreen = ({ navigation }: Props) => {
     null,
   );
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+
+  // ── Logged-in user details (name/email/mobile) ───────────────────────────
+  // Same read-on-focus pattern as AccountScreen — session values are
+  // persisted by setSession() right after VerifyOtp/VerifyCookie/
+  // UpdateProfile, so we re-read on every focus rather than relying on nav
+  // params, and pick up any profile edit made elsewhere without a relaunch.
+  const [userName, setUserName] = useState('');
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      (async () => {
+        const n = await getName();
+        if (cancelled) return;
+        setUserName(n ?? '');
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, []),
+  );
+
+  const displayName = userName || 'there';
 
   // ── Live GPS fix from MapView's own blue-dot, refined over time ─────────
   // Drives ONLY the top pill. The very first fix reported here is often a
@@ -255,8 +300,12 @@ const HomeScreen = ({ navigation }: Props) => {
     });
   };
 
-  const goRide = (mode: 'auto' | 'erickshaw') =>
+  const goRide = (mode?: 'auto' | 'erickshaw' | 'bike') =>
     (navigation.getParent()?.navigate as any)('Ride', {
+      // Intentionally passed through as-is, including undefined — RideScreen
+      // treats "no mode" as "no preference, just show the first card",
+      // which is different from explicitly requesting Auto or E-Rickshaw
+      // (the Services row below does pass an explicit mode for that reason).
       mode,
       pickup: pickup?.address ?? '',
       drop: drop?.address ?? '',
@@ -292,11 +341,11 @@ const HomeScreen = ({ navigation }: Props) => {
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>AR</Text>
+              <Text style={styles.avatarText}>{getInitials(displayName)}</Text>
             </View>
             <View>
-              <Text style={styles.greeting}>{t.home.greeting}</Text>
-              <Text style={styles.headerTitle}>{t.home.headerTitle}</Text>
+              <Text style={styles.greeting}>{getTimeGreeting()}</Text>
+              <Text style={styles.headerTitle}>{displayName}</Text>
             </View>
           </View>
           <View style={styles.headerIcons}>
@@ -490,7 +539,7 @@ const HomeScreen = ({ navigation }: Props) => {
           <TouchableOpacity
             style={styles.bookBtn}
             activeOpacity={0.85}
-            onPress={() => goRide('auto')}
+            onPress={() => goRide()}
           >
             <Icon name="taxi" size={20} stroke={Colors.lime} sw={1.7} />
             <Text style={styles.bookBtnText}>{t.home.book} Ride</Text>
@@ -528,9 +577,7 @@ const HomeScreen = ({ navigation }: Props) => {
               onPress={() =>
                 SERVICE_IDS[i] === 'courier'
                   ? goCourier()
-                  : goRide(
-                      SERVICE_IDS[i] === 'erickshaw' ? 'erickshaw' : 'auto',
-                    )
+                  : goRide(SERVICE_IDS[i] as 'auto' | 'erickshaw' | 'bike')
               }
             >
               <View style={styles.serviceIconWrap}>
@@ -680,7 +727,7 @@ const styles = StyleSheet.create({
   greeting: {
     ...Typography.label,
     color: Colors.textTertiary,
-    fontSize: fscale(10),
+    fontSize: fscale(12),
     marginBottom: 1,
   },
   headerTitle: { ...Typography.h4, color: Colors.textPrimary },

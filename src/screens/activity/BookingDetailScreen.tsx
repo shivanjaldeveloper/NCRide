@@ -1,24 +1,84 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell, HeaderBack } from '../../components/layout';
 import { NCCard, Icon, Row } from '../../components/common';
+import { MapView } from '../../components/map';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
+import { getSessionCookie } from '../../utils/auth';
+import { decodePolyline } from '../../utils/polyline';
+import { useTranslation } from '../../i18n';
+import {
+  getRideStatus,
+  isRideApiError,
+  isCompletedStatus,
+  isTerminalFailureStatus,
+  type RideStatusResponse,
+} from '../../services/rideApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'BookingDetail'>;
 
+const shortAddr = (addr: string): string => addr.split(',')[0].trim() || addr;
+
+const money = (amount?: string, text?: string): string => {
+  if (text) return text;
+  if (!amount) return '₹ 0';
+  return `₹ ${amount}`;
+};
+
+const statusChip = (status: string): { label: string; color: string; bg: string } => {
+  if (isCompletedStatus(status)) return { label: 'Completed', color: Colors.green, bg: '#E9F8E4' };
+  if (isTerminalFailureStatus(status)) return { label: 'Cancelled', color: Colors.red, bg: '#FBEAE9' };
+  const label = status ? status.charAt(0) + status.slice(1).toLowerCase() : 'In progress';
+  return { label, color: Colors.blue, bg: '#E8F1FF' };
+};
+
 const BookingDetailScreen = ({ navigation, route }: Props) => {
-  const { id, title } = route.params;
-  const isRide =
-    id.startsWith('NR-N22') || id.startsWith('NR-RV') || id.startsWith('NR-IC');
-  const isCourier = id.startsWith('NR-CR');
+  const { t } = useTranslation();
+  const { rideTran, title: initialTitle, icon } = route.params;
+
+  const [detail, setDetail] = useState<RideStatusResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadDetail = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const cookie = await getSessionCookie();
+      if (!cookie) {
+        setError(t.activity.detailLoadError);
+        return;
+      }
+      const res = await getRideStatus({ cookie, rideTran });
+      setDetail(res);
+    } catch (err) {
+      setError(isRideApiError(err) ? err.message : t.activity.detailLoadError);
+    } finally {
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rideTran]);
+
+  useEffect(() => {
+    loadDetail();
+  }, [loadDetail]);
+
+  const title =
+    detail
+      ? `${shortAddr(detail.Pickup.Address)} → ${shortAddr(detail.Drop.Address)}`
+      : initialTitle ?? '';
+  const chip = statusChip(detail?.Status ?? '');
+  const routeCoords = detail?.Route.EncodedPolyline
+    ? decodePolyline(detail.Route.EncodedPolyline)
+    : [];
 
   return (
     <ScreenShell>
       <HeaderBack
-        title="Trip details"
-        sub={id}
+        title={t.activity.detailTitle}
+        sub={`#${rideTran.slice(0, 10)}`}
         onBack={() => navigation.goBack()}
         right={
           <View style={styles.shareBtn}>
@@ -27,181 +87,162 @@ const BookingDetailScreen = ({ navigation, route }: Props) => {
         }
       />
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Main summary card ─────────────────────────────── */}
-        <NCCard>
-          <View style={styles.summaryRow}>
-            <View style={styles.summaryIcon}>
-              <Icon
-                name={isCourier ? 'courier' : 'taxi'}
-                size={22}
-                stroke={Colors.ink}
-              />
+      {loading ? (
+        <View style={styles.centerFill}>
+          <ActivityIndicator color={Colors.ink} />
+        </View>
+      ) : error || !detail ? (
+        <View style={styles.centerFill}>
+          <Icon name="close" size={22} stroke={Colors.red} />
+          <Text style={styles.centerText}>{error ?? t.activity.detailLoadError}</Text>
+          <TouchableOpacity style={styles.retryBtn} activeOpacity={0.8} onPress={loadDetail}>
+            <Text style={styles.retryText}>{t.activity.retry}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={styles.content}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* ── Main summary card ─────────────────────────────── */}
+          <NCCard>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryIcon}>
+                <Icon name={icon ?? 'car'} size={22} stroke={Colors.ink} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.summaryTitle} numberOfLines={2}>
+                  {title}
+                </Text>
+                <Text style={styles.summarySub}>{detail.VehicleType}</Text>
+              </View>
+              <View style={[styles.statusChip, { backgroundColor: chip.bg }]}>
+                <Text style={[styles.statusText, { color: chip.color }]}>{chip.label}</Text>
+              </View>
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.summaryTitle} numberOfLines={2}>
-                {title}
-              </Text>
-              <Text style={styles.summarySub}>
-                {isCourier
-                  ? 'Same-city courier · 18 Mar · 14:24'
-                  : 'Auto Rickshaw · 18 Mar · 4:42 PM'}
-              </Text>
-            </View>
-            <View style={styles.paidChip}>
-              <Text style={styles.paidText}>Paid</Text>
-            </View>
-          </View>
 
-          {/* Amount row */}
-          <View style={styles.amountRow}>
-            <View>
-              <Text style={styles.amountLabel}>AMOUNT PAID</Text>
-              <Text style={styles.amountVal}>
-                ₹ {isCourier ? '99.00' : '110.00'}
-              </Text>
+            {/* Amount row */}
+            <View style={styles.amountRow}>
+              <View>
+                <Text style={styles.amountLabel}>
+                  {isCompletedStatus(detail.Status) ? 'AMOUNT PAID' : 'FARE'}
+                </Text>
+                <Text style={styles.amountVal}>{money(detail.Fare.FinalFare, detail.Fare.FinalFareText)}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.amountMeta}>
+                  {detail.Route.DistanceKM} km · {detail.Route.DurationMinutes} min
+                </Text>
+              </View>
             </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text style={styles.amountMeta}>
-                {isCourier ? '2.4 km · 22 min' : '3.2 km · 18 min'}
-              </Text>
-              <Text style={styles.amountMeta2}>UPI · user@ncrride</Text>
-            </View>
-          </View>
-        </NCCard>
+          </NCCard>
 
-        {/* ── Trip info ─────────────────────────────────────── */}
-        <NCCard style={styles.card}>
-          <Text style={styles.sectionLabel}>
-            {isCourier ? 'DELIVERY INFO' : 'TRIP INFO'}
-          </Text>
-
-          {isCourier ? (
-            <>
-              <Row
-                icon="route"
-                title="Route"
-                sub="Sector 62 → Connaught Place"
+          {/* ── Route map ─────────────────────────────────────── */}
+          {routeCoords.length > 1 && (
+            <NCCard style={styles.mapCard} pad={0}>
+              <MapView
+                height={fscale(160)}
+                interactive={false}
+                showControls={false}
+                pickupCoord={{
+                  latitude: Number(detail.Pickup.Latitude),
+                  longitude: Number(detail.Pickup.Longitude),
+                }}
+                dropCoord={{
+                  latitude: Number(detail.Drop.Latitude),
+                  longitude: Number(detail.Drop.Longitude),
+                }}
+                externalRouteCoords={routeCoords}
+                externalRouteOnly
+                routeColor={detail.Route.PolylineColor}
+                routeWidth={Number(detail.Route.PolylineWidth) || undefined}
+                style={styles.map}
               />
-              <Row
-                icon="user"
-                title="Sender"
-                sub="Arya Sengupta · +91 98300 12428"
-              />
-              <Row
-                icon="user"
-                title="Receiver"
-                sub="Rituparna Roy · +91 99033 88817"
-              />
-              <Row icon="courier" title="Parcel" sub="Documents · < 0.5 kg" />
-              <Row
-                icon="clock"
-                title="Delivered"
-                sub="18 Mar · 2:42 PM → 4:38 PM"
-              />
-            </>
-          ) : (
-            <>
-              <Row
-                icon="route"
-                title="Pickup → Drop"
-                sub="Sector 62 → Connaught Place"
-              />
-              <Row
-                icon="user"
-                title="Driver"
-                sub="Rajat Kr. Saha · DL 5C NC 4421 · ⭐ 4.92"
-              />
-              <Row
-                icon="taxi"
-                title="Vehicle"
-                sub="Auto Rickshaw · DL 5C NC 4421"
-              />
-              <Row
-                icon="clock"
-                title="Duration"
-                sub="18 Mar · 4:42 PM → 5:00 PM · 18 min"
-              />
-            </>
+            </NCCard>
           )}
-        </NCCard>
 
-        {/* ── Fare breakup ─────────────────────────────────── */}
-        <NCCard style={styles.card}>
-          <Text style={styles.sectionLabel}>FARE BREAKUP</Text>
-          {(isCourier
-            ? [
-                ['Base fare', '₹ 74.00'],
-                ['Platform fee', '₹ 5.00'],
-                ['GST · 5%', '₹ 5.18'],
-                ['Coupon · PARCEL25', '−₹ 25.00'],
-              ]
-            : [
-                ['Base fare', '₹ 25.00'],
-                ['Distance · 3.2 km', '₹ 67.20'],
-                ['Platform fee', '₹ 5.00'],
-                ['GST · 5%', '₹ 4.86'],
-                ['Coupon · AUTORIDE30', '−₹ 30.00'],
-              ]
-          ).map(([k, v]) => (
-            <View key={k} style={styles.fareRow}>
-              <Text
-                style={[
-                  styles.fareKey,
-                  k.startsWith('Coupon') && { color: Colors.green },
-                ]}
-              >
-                {k}
+          {/* ── Trip info ─────────────────────────────────────── */}
+          <NCCard style={styles.card}>
+            <Text style={styles.sectionLabel}>TRIP INFO</Text>
+            <Row icon="pin" title="Pickup" sub={detail.Pickup.Address} />
+            <Row icon="pinFill" title="Drop" sub={detail.Drop.Address} />
+            {detail.Driver && (
+              <>
+                <Row
+                  icon="user"
+                  title="Driver"
+                  sub={`${detail.Driver.Name} · ${detail.Driver.Mobile}`}
+                />
+                <Row
+                  icon="taxi"
+                  title="Vehicle"
+                  sub={`${detail.Driver.VehicleModel} · ${detail.Driver.VehicleNumber}`}
+                />
+              </>
+            )}
+          </NCCard>
+
+          {/* ── Fare breakup ─────────────────────────────────── */}
+          <NCCard style={styles.card}>
+            <Text style={styles.sectionLabel}>FARE BREAKUP</Text>
+            {[
+              ['Original fare', money(detail.Fare.OriginalFare, detail.Fare.OriginalFareText)],
+              ...(Number(detail.Fare.DiscountAmount) > 0
+                ? [[
+                    `Discount${detail.Fare.DiscountPercentage ? ` · ${detail.Fare.DiscountPercentage}%` : ''}`,
+                    `−${money(detail.Fare.DiscountAmount, detail.Fare.DiscountAmountText)}`,
+                  ]]
+                : []),
+              ...(detail.Fare.SurgeApplied === 'YES'
+                ? [[
+                    `Surge${detail.Fare.SurgeMultiplier ? ` · ${detail.Fare.SurgeMultiplier}x` : ''}`,
+                    money(detail.Fare.SurgeAmount, detail.Fare.SurgeAmountText),
+                  ]]
+                : []),
+            ].map(([k, v]) => (
+              <View key={k} style={styles.fareRow}>
+                <Text style={[styles.fareKey, k.startsWith('Discount') && { color: Colors.green }]}>{k}</Text>
+                <Text style={[styles.fareVal, k.startsWith('Discount') && { color: Colors.green }]}>{v}</Text>
+              </View>
+            ))}
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>
+                {isCompletedStatus(detail.Status) ? 'Total paid' : 'Total fare'}
               </Text>
-              <Text
-                style={[
-                  styles.fareVal,
-                  k.startsWith('Coupon') && { color: Colors.green },
-                ]}
-              >
-                {v}
-              </Text>
+              <Text style={styles.totalVal}>{money(detail.Fare.FinalFare, detail.Fare.FinalFareText)}</Text>
             </View>
-          ))}
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total paid</Text>
-            <Text style={styles.totalVal}>
-              ₹ {isCourier ? '99.00' : '110.00'}
-            </Text>
-          </View>
-        </NCCard>
+          </NCCard>
 
-        {/* ── Actions ───────────────────────────────────────── */}
-        <NCCard style={styles.card}>
-          <Text style={styles.sectionLabel}>ACTIONS</Text>
-          <Row
-            icon="invoice"
-            title="Download invoice"
-            onPress={() => navigation.navigate('InvoiceReceipt')}
-          />
-          <Row icon="receipt" title="Share receipt" />
-          <Row
-            icon="chat"
-            title="Report an issue"
-            sub="Lost item, fare dispute"
-            onPress={() => navigation.navigate('SOS')}
-          />
-        </NCCard>
+          {/* ── Actions ───────────────────────────────────────── */}
+          <NCCard style={styles.card}>
+            <Text style={styles.sectionLabel}>ACTIONS</Text>
+            {isCompletedStatus(detail.Status) && (
+              <Row
+                icon="invoice"
+                title="Download invoice"
+                onPress={() => navigation.navigate('InvoiceReceipt')}
+              />
+            )}
+            <Row
+              icon="chat"
+              title="Report an issue"
+              sub="Lost item, fare dispute"
+              onPress={() => navigation.navigate('SOS')}
+            />
+          </NCCard>
 
-        {/* ── Support ───────────────────────────────────────── */}
-        <NCCard style={styles.card}>
-          <Text style={styles.sectionLabel}>NEED HELP?</Text>
-          <Row
-            icon="chat"
-            title="Chat with NCRide support"
-            sub="Replies in 28 sec"
-            onPress={() => navigation.navigate('SOS')}
-          />
-        </NCCard>
-      </ScrollView>
+          {/* ── Support ───────────────────────────────────────── */}
+          <NCCard style={styles.card}>
+            <Text style={styles.sectionLabel}>NEED HELP?</Text>
+            <Row
+              icon="chat"
+              title="Chat with NCRide support"
+              sub="Replies in 28 sec"
+              onPress={() => navigation.navigate('SOS')}
+            />
+          </NCCard>
+        </ScrollView>
+      )}
     </ScreenShell>
   );
 };
@@ -211,6 +252,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.screen,
     paddingBottom: fscale(40),
   },
+
+  centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: fscale(10), paddingHorizontal: Spacing.screen * 2 },
+  centerText: { fontSize: fscale(13), color: Colors.textSecondary, textAlign: 'center' },
+  retryBtn: { marginTop: fscale(4), paddingHorizontal: fscale(20), paddingVertical: fscale(10), borderRadius: Radii.lg, backgroundColor: Colors.ink },
+  retryText: { fontSize: fscale(13), fontWeight: '700', color: '#fff' },
 
   shareBtn: {
     width: fscale(40),
@@ -249,13 +295,12 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 2,
   },
-  paidChip: {
+  statusChip: {
     paddingHorizontal: fscale(8),
     paddingVertical: fscale(4),
     borderRadius: Radii.sm,
-    backgroundColor: '#E9F8E4',
   },
-  paidText: { fontSize: fscale(11), fontWeight: '700', color: Colors.green },
+  statusText: { fontSize: fscale(11), fontWeight: '700' },
 
   amountRow: {
     flexDirection: 'row',
@@ -280,13 +325,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   amountMeta: { fontSize: fscale(11.5), color: Colors.textSecondary },
-  amountMeta2: {
-    fontSize: fscale(11),
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
 
   card: { marginTop: Spacing.md },
+  mapCard: { marginTop: Spacing.md, overflow: 'hidden' },
+  map: { borderRadius: Radii.xxl },
 
   sectionLabel: {
     fontSize: fscale(11),

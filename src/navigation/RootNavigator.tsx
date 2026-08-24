@@ -16,14 +16,12 @@ import LocationPermissionScreen from '../screens/Permissions/LocationPermissionS
 import LocationPickerScreen from '../screens/location/LocationPickerScreen';
 import HomeTabs from './HomeTabs';
 import RideScreen from '../screens/ride/RideScreen';
+import SearchingScreen from '../screens/ride/SearchingScreen';
 import DriverScreen from '../screens/ride/DriverScreen';
 import TrackingScreen from '../screens/ride/TrackingScreen';
 import CompletedScreen from '../screens/ride/CompletedScreen';
 import ChatScreen from '../screens/chat/ChatScreen';
 import SOSScreen from '../screens/safety/SOSScreen';
-import InvoiceScreen from '../screens/ride/InvoiceScreen';
-import PayRideScreen from '../screens/ride/PayRideScreen';
-import ReceiptScreen from '../screens/ride/ReceiptScreen';
 import InvoiceReceiptScreen from '../screens/ride/InvoiceReceiptScreen';
 import CourierScreen from '../screens/courier/CourierScreen';
 import CourierSummary from '../screens/courier/CourierSummaryScreen';
@@ -99,6 +97,11 @@ const AppNavigator = () => (
         options={{ animation: 'slide_from_bottom', gestureEnabled: true }}
       />
       <Stack.Screen
+        name="Searching"
+        component={SearchingScreen}
+        options={{ animation: 'slide_from_right', gestureEnabled: false }}
+      />
+      <Stack.Screen
         name="Driver"
         component={DriverScreen}
         options={{ animation: 'slide_from_right', gestureEnabled: false }}
@@ -122,21 +125,6 @@ const AppNavigator = () => (
         name="SOS"
         component={SOSScreen}
         options={{ animation: 'slide_from_bottom', gestureEnabled: true }}
-      />
-      <Stack.Screen
-        name="Invoice"
-        component={InvoiceScreen}
-        options={{ animation: 'slide_from_right', gestureEnabled: true }}
-      />
-      <Stack.Screen
-        name="PayRide"
-        component={PayRideScreen}
-        options={{ animation: 'slide_from_right', gestureEnabled: true }}
-      />
-      <Stack.Screen
-        name="Receipt"
-        component={ReceiptScreen}
-        options={{ animation: 'slide_from_bottom', gestureEnabled: false }}
       />
       <Stack.Screen
         name="InvoiceReceipt"
