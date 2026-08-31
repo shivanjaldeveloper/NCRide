@@ -118,6 +118,7 @@ export type RootStackParamList = {
   // Passed by TrackingScreen once GetRideStatus reports Status "COMPLETED".
   Completed:
     | {
+        rideTran?: string;
         distanceKm?: string;
         durationMin?: string;
         pickup?: string;

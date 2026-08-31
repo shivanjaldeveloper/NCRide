@@ -84,6 +84,7 @@ const TrackingScreen = ({ navigation, route }: Props) => {
 
         if (isCompletedStatus(result.Status)) {
           navigation.replace('Completed', {
+            rideTran,
             distanceKm: result.Route?.DistanceKM,
             durationMin: result.Route?.DurationMinutes,
             pickup: result.Pickup?.Address,

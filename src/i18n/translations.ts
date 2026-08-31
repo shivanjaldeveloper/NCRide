@@ -275,6 +275,8 @@ const en = {
     routeLabel: 'Pickup → Drop',
     driverLabel: 'Driver',
     vehicleLabel: 'Vehicle',
+    commentPlaceholder: 'Leave a comment (optional)',
+    submitting: 'Submitting...',
   },
   invoice: {
     title: 'Trip invoice',
@@ -734,6 +736,8 @@ const hi: TranslationKeys = {
     routeLabel: 'पिकअप → ड्रॉप',
     driverLabel: 'ड्राइवर',
     vehicleLabel: 'वाहन',
+    commentPlaceholder: 'टिप्पणी लिखें (वैकल्पिक)',
+    submitting: 'सबमिट हो रहा है...',
   },
   invoice: {
     title: 'ट्रिप इनवॉइस',
@@ -1184,6 +1188,8 @@ const mr: TranslationKeys = {
     routeLabel: 'पिकअप → ड्रॉप',
     driverLabel: 'ड्रायव्हर',
     vehicleLabel: 'वाहन',
+    commentPlaceholder: 'टिप्पणी लिहा (ऐच्छिक)',
+    submitting: 'सबमिट होत आहे...',
   },
   invoice: {
     title: 'ट्रिप बीजक',

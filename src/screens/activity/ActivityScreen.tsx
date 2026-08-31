@@ -286,6 +286,14 @@ const ActivityScreen = ({ navigation }: Props) => {
                     {tagInfo.label}
                   </Text>
                 </View>
+                {!!item.Rating?.ByPartner && (
+                  <View style={styles.ratingBadge}>
+                    <Icon name="starFill" size={11} stroke={Colors.amber} />
+                    <Text style={styles.ratingBadgeText}>
+                      {item.Rating.ByPartner}
+                    </Text>
+                  </View>
+                )}
                 <Icon
                   name="chevron"
                   size={16}
@@ -487,6 +495,16 @@ const styles = StyleSheet.create({
     borderRadius: Radii.sm,
   },
   tagText: { fontSize: fscale(11), fontWeight: '700' },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: fscale(3),
+  },
+  ratingBadgeText: {
+    fontSize: fscale(11),
+    fontWeight: '700',
+    color: Colors.textSecondary,
+  },
   chevron: { marginTop: fscale(2) },
   centerFill: {
     flex: 1,

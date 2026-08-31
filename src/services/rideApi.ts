@@ -225,6 +225,13 @@ export interface CreateRideResponse {
   ResponseDateTime: string;
 }
 
+export interface RideRating {
+  ByCustomer: string;
+  ByCustomerComment?: string;
+  ByPartner: string;
+  ByPartnerComment?: string;
+}
+
 export interface RideStatusResponse {
   Result: string;
   Message?: string;
@@ -237,6 +244,10 @@ export interface RideStatusResponse {
   Fare: RideFareInfo;
   StartOTP?: string;
   Driver?: RideDriverInfo;
+  // Present on completed rides once either side has rated — confirmed via
+  // the GetRideStatus/detail sample. Absent (not just empty) on rides
+  // nobody's rated yet.
+  Rating?: RideRating;
   ResponseDateTime: string;
 }
 
@@ -401,6 +412,9 @@ export interface RideHistoryItem {
   CreatedTime: string;
   CompletedDate: string;
   CompletedTime: string;
+  // Same shape/optionality as RideStatusResponse's Rating — confirmed via
+  // the GetRideHistory sample.
+  Rating?: RideRating;
 }
 
 export interface RideHistoryResponse {
@@ -425,6 +439,36 @@ export const getRideHistory = (params: {
 }): Promise<RideHistoryResponse> =>
   postRideApi<RideHistoryResponse>('GetRideHistory', {
     cookie: params.cookie,
+  });
+
+export interface SubmitRatingByCustomerResponse {
+  Result: string;
+  Message?: string;
+  RideTran: string;
+  Rating: string;
+  ResponseDateTime: string;
+}
+
+/**
+ * Submits the rider's post-ride rating (and optional remark) for the
+ * driver. comment is optional on the backend; pass an empty string when
+ * the rider left no remark rather than omitting the field.
+ *
+ * Confirmed against the live backend via curl:
+ *   POST https://aloapp.shop/apiv1/customer/customer-riderequest.asmx/SubmitRatingByCustomer
+ *   Body: cookie, rideTran, rating, comment
+ */
+export const submitRatingByCustomer = (params: {
+  cookie: string;
+  rideTran: string;
+  rating: number;
+  comment?: string;
+}): Promise<SubmitRatingByCustomerResponse> =>
+  postRideApi<SubmitRatingByCustomerResponse>('SubmitRatingByCustomer', {
+    cookie: params.cookie,
+    rideTran: params.rideTran,
+    rating: String(params.rating),
+    comment: params.comment ?? '',
   });
 
 export { RideApiError };

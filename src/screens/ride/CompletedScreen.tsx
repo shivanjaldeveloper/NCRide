@@ -5,6 +5,8 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  TextInput,
+  Alert,
 } from 'react-native';
 import Svg, { Path, Circle } from 'react-native-svg';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -13,6 +15,8 @@ import { ScreenShell } from '../../components/layout';
 import { NCButton, NCCard, Icon, Row } from '../../components/common';
 import { Colors, Spacing, fscale, Radii } from '../../theme';
 import { useTranslation } from '../../i18n';
+import { getSessionCookie } from '../../utils/auth';
+import { submitRatingByCustomer } from '../../services/rideApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Completed'>;
 
@@ -35,6 +39,7 @@ const money = (text?: string): string | null => {
 const CompletedScreen = ({ navigation, route }: Props) => {
   const { t } = useTranslation();
   const {
+    rideTran,
     distanceKm,
     durationMin,
     pickup,
@@ -46,9 +51,42 @@ const CompletedScreen = ({ navigation, route }: Props) => {
   } = route.params ?? {};
   const [rating, setRating] = useState(5);
   const [picked, setPicked] = useState<string[]>([]);
+  const [comment, setComment] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const toggleCompliment = (c: string) =>
     setPicked(p => (p.includes(c) ? p.filter(x => x !== c) : [...p, c]));
+
+  const handleDone = () => navigation.navigate('HomeTabs');
+
+  const handlePaid = async () => {
+    if (submitting) return;
+    if (!rideTran) {
+      // No ride context to rate against — don't block the rider from
+      // moving on.
+      handleDone();
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const cookie = (await getSessionCookie()) ?? '';
+      if (!cookie) throw new Error('Session not found. Please log in again.');
+      await submitRatingByCustomer({
+        cookie,
+        rideTran,
+        rating,
+        comment: comment.trim(),
+      });
+      handleDone();
+    } catch (err: any) {
+      Alert.alert(
+        'Could not submit rating',
+        err?.message || 'Please try again.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const tripSummary = [
     distanceKm ? `${distanceKm} km` : null,
@@ -180,6 +218,15 @@ const CompletedScreen = ({ navigation, route }: Props) => {
                 );
               })}
             </View>
+            <TextInput
+              style={styles.commentInput}
+              placeholder={t.completed.commentPlaceholder}
+              placeholderTextColor={Colors.textSecondary}
+              value={comment}
+              onChangeText={setComment}
+              multiline
+              maxLength={300}
+            />
           </NCCard>
 
           <NCCard style={styles.card} pad={18}>
@@ -228,9 +275,11 @@ const CompletedScreen = ({ navigation, route }: Props) => {
       <View style={styles.bottomBar}>
         <NCButton
           label={t.completed.paidBtn}
-          onPress={() => navigation.navigate('HomeTabs')}
+          onPress={handlePaid}
           variant="primary"
           size="lg"
+          loading={submitting}
+          disabled={submitting}
         />
       </View>
     </ScreenShell>
@@ -382,6 +431,20 @@ const styles = StyleSheet.create({
     color: Colors.ink,
   },
   complimentTextActive: { color: '#fff' },
+  commentInput: {
+    width: '100%',
+    minHeight: fscale(64),
+    marginTop: Spacing.md,
+    paddingHorizontal: fscale(14),
+    paddingVertical: fscale(10),
+    borderRadius: Radii.md,
+    borderWidth: 0.5,
+    borderColor: Colors.borderSoft,
+    backgroundColor: Colors.bgOffWhite,
+    fontSize: fscale(13.5),
+    color: Colors.ink,
+    textAlignVertical: 'top',
+  },
   bottomBar: {
     paddingHorizontal: Spacing.screen,
     paddingTop: Spacing.md,

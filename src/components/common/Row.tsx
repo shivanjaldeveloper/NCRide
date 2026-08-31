@@ -12,6 +12,10 @@ interface Props {
   onPress?: () => void;
   accent?: string;
   danger?: boolean;
+  // Optional override for the icon's stroke color — falls back to the
+  // existing danger/ink logic when omitted, so every other call site is
+  // unaffected.
+  iconColor?: string;
 }
 
 /**
@@ -20,11 +24,30 @@ interface Props {
  * chevron. Used throughout Account, Settings, Activity, Saved places, etc.
  * RN port of the reference `Row`.
  */
-const Row = ({ icon, title, sub, right, onPress, accent, danger }: Props) => {
+const Row = ({
+  icon,
+  title,
+  sub,
+  right,
+  onPress,
+  accent,
+  danger,
+  iconColor,
+}: Props) => {
   const content = (
     <View style={styles.row}>
-      <View style={[styles.iconWrap, { backgroundColor: accent || Colors.borderSoft }]}>
-        <Icon name={icon} size={18} stroke={danger ? Colors.red : Colors.ink} sw={1.7} />
+      <View
+        style={[
+          styles.iconWrap,
+          { backgroundColor: accent || Colors.borderSoft },
+        ]}
+      >
+        <Icon
+          name={icon}
+          size={18}
+          stroke={iconColor ?? (danger ? Colors.red : Colors.ink)}
+          sw={1.7}
+        />
       </View>
       <View style={styles.textWrap}>
         <Text
@@ -39,7 +62,15 @@ const Row = ({ icon, title, sub, right, onPress, accent, danger }: Props) => {
           </Text>
         ) : null}
       </View>
-      {right ?? (onPress && <Icon name="chevron" size={18} stroke={Colors.textTertiary} sw={1.6} />)}
+      {right ??
+        (onPress && (
+          <Icon
+            name="chevron"
+            size={18}
+            stroke={Colors.textTertiary}
+            sw={1.6}
+          />
+        ))}
     </View>
   );
 

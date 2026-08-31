@@ -273,6 +273,39 @@ const BookingDetailScreen = ({ navigation, route }: Props) => {
             </View>
           </NCCard>
 
+          {/* ── Ratings ───────────────────────────────────────── */}
+          {!!detail.Rating && (
+            <NCCard style={styles.card}>
+              <Text style={styles.sectionLabel}>RATINGS</Text>
+              {!!detail.Rating.ByCustomer && (
+                <Row
+                  icon="starFill"
+                  iconColor={Colors.amber}
+                  title="You rated the driver"
+                  sub={detail.Rating.ByCustomerComment || undefined}
+                  right={
+                    <Text style={styles.ratingValue}>
+                      {detail.Rating.ByCustomer}
+                    </Text>
+                  }
+                />
+              )}
+              {!!detail.Rating.ByPartner && (
+                <Row
+                  icon="starFill"
+                  iconColor={Colors.amber}
+                  title="Driver rated you"
+                  sub={detail.Rating.ByPartnerComment || undefined}
+                  right={
+                    <Text style={styles.ratingValue}>
+                      {detail.Rating.ByPartner}
+                    </Text>
+                  }
+                />
+              )}
+            </NCCard>
+          )}
+
           {/* ── Actions ───────────────────────────────────────── */}
           {isCompletedStatus(detail.Status) && (
             <NCCard style={styles.card}>
@@ -420,6 +453,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: Colors.ink,
     letterSpacing: -0.4,
+  },
+  ratingValue: {
+    fontSize: fscale(14),
+    fontWeight: '800',
+    color: Colors.ink,
   },
 });
 
