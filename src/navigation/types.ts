@@ -145,7 +145,6 @@ export type RootStackParamList = {
   Notifications: undefined;
   SavedPlaces: undefined;
   Referrals: undefined;
-  PaymentMethods: undefined;
   Settings: undefined;
   Logout: undefined;
 };

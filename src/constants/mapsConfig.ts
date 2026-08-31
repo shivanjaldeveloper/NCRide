@@ -17,7 +17,12 @@
 // "Geocoding API" — those use maps.googleapis.com/maps/api/... with a
 // `?key=` query param; Places API (New) uses places.googleapis.com/v1/...
 // with an `X-Goog-Api-Key` header — do not mix the two).
-export const GOOGLE_MAPS_API_KEY = 'AIzaSyAU4PPy7jML1IcDSHgwWjoZHm-AaIDt1JI';
+//
+// Comes from .env (see .env.example) — never hardcode a real key here,
+// it would ship inside the JS bundle and be committed to git.
+import { GOOGLE_MAPS_API_KEY as ENV_GOOGLE_MAPS_API_KEY } from '@env';
+
+export const GOOGLE_MAPS_API_KEY = ENV_GOOGLE_MAPS_API_KEY;
 
 // Places API (New) base URL
 export const PLACES_API_BASE = 'https://places.googleapis.com/v1';

@@ -18,11 +18,13 @@
 import 'react-native-get-random-values';
 import CryptoJS from 'crypto-js';
 import bs58 from 'bs58';
+import { SHARED_SECRET as ENV_SHARED_SECRET } from '@env';
 
-// TODO: replace with the real shared secret for this project — do NOT reuse
-// a key from another project/environment. Get this from whoever owns the
-// aloapp.shop backend's encryption config.
-const SHARED_SECRET = 'REPLACE_ME_WITH_ALOAPP_SHOP_SHARED_SECRET';
+// TODO: replace the .env value (see .env.example) with the real shared
+// secret for this project — do NOT reuse a key from another
+// project/environment. Get this from whoever owns the aloapp.shop
+// backend's encryption config.
+const SHARED_SECRET = ENV_SHARED_SECRET;
 
 // Single switch for "is encryption actually ready to use yet". Stays false
 // until the real SHARED_SECRET above is in place — every caller that goes

@@ -1,5 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+  TouchableOpacity,
+} from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../../navigation/types';
 import { ScreenShell, HeaderBack } from '../../components/layout';
@@ -27,10 +34,16 @@ const money = (amount?: string, text?: string): string => {
   return `₹ ${amount}`;
 };
 
-const statusChip = (status: string): { label: string; color: string; bg: string } => {
-  if (isCompletedStatus(status)) return { label: 'Completed', color: Colors.green, bg: '#E9F8E4' };
-  if (isTerminalFailureStatus(status)) return { label: 'Cancelled', color: Colors.red, bg: '#FBEAE9' };
-  const label = status ? status.charAt(0) + status.slice(1).toLowerCase() : 'In progress';
+const statusChip = (
+  status: string,
+): { label: string; color: string; bg: string } => {
+  if (isCompletedStatus(status))
+    return { label: 'Completed', color: Colors.green, bg: '#E9F8E4' };
+  if (isTerminalFailureStatus(status))
+    return { label: 'Cancelled', color: Colors.red, bg: '#FBEAE9' };
+  const label = status
+    ? status.charAt(0) + status.slice(1).toLowerCase()
+    : 'In progress';
   return { label, color: Colors.blue, bg: '#E8F1FF' };
 };
 
@@ -65,10 +78,9 @@ const BookingDetailScreen = ({ navigation, route }: Props) => {
     loadDetail();
   }, [loadDetail]);
 
-  const title =
-    detail
-      ? `${shortAddr(detail.Pickup.Address)} → ${shortAddr(detail.Drop.Address)}`
-      : initialTitle ?? '';
+  const title = detail
+    ? `${shortAddr(detail.Pickup.Address)} → ${shortAddr(detail.Drop.Address)}`
+    : initialTitle ?? '';
   const chip = statusChip(detail?.Status ?? '');
   const routeCoords = detail?.Route.EncodedPolyline
     ? decodePolyline(detail.Route.EncodedPolyline)
@@ -94,8 +106,14 @@ const BookingDetailScreen = ({ navigation, route }: Props) => {
       ) : error || !detail ? (
         <View style={styles.centerFill}>
           <Icon name="close" size={22} stroke={Colors.red} />
-          <Text style={styles.centerText}>{error ?? t.activity.detailLoadError}</Text>
-          <TouchableOpacity style={styles.retryBtn} activeOpacity={0.8} onPress={loadDetail}>
+          <Text style={styles.centerText}>
+            {error ?? t.activity.detailLoadError}
+          </Text>
+          <TouchableOpacity
+            style={styles.retryBtn}
+            activeOpacity={0.8}
+            onPress={loadDetail}
+          >
             <Text style={styles.retryText}>{t.activity.retry}</Text>
           </TouchableOpacity>
         </View>
@@ -117,7 +135,9 @@ const BookingDetailScreen = ({ navigation, route }: Props) => {
                 <Text style={styles.summarySub}>{detail.VehicleType}</Text>
               </View>
               <View style={[styles.statusChip, { backgroundColor: chip.bg }]}>
-                <Text style={[styles.statusText, { color: chip.color }]}>{chip.label}</Text>
+                <Text style={[styles.statusText, { color: chip.color }]}>
+                  {chip.label}
+                </Text>
               </View>
             </View>
 
@@ -127,11 +147,14 @@ const BookingDetailScreen = ({ navigation, route }: Props) => {
                 <Text style={styles.amountLabel}>
                   {isCompletedStatus(detail.Status) ? 'AMOUNT PAID' : 'FARE'}
                 </Text>
-                <Text style={styles.amountVal}>{money(detail.Fare.FinalFare, detail.Fare.FinalFareText)}</Text>
+                <Text style={styles.amountVal}>
+                  {money(detail.Fare.FinalFare, detail.Fare.FinalFareText)}
+                </Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={styles.amountMeta}>
-                  {detail.Route.DistanceKM} km · {detail.Route.DurationMinutes} min
+                  {detail.Route.DistanceKM} km · {detail.Route.DurationMinutes}{' '}
+                  min
                 </Text>
               </View>
             </View>
@@ -186,61 +209,81 @@ const BookingDetailScreen = ({ navigation, route }: Props) => {
           <NCCard style={styles.card}>
             <Text style={styles.sectionLabel}>FARE BREAKUP</Text>
             {[
-              ['Original fare', money(detail.Fare.OriginalFare, detail.Fare.OriginalFareText)],
+              [
+                'Original fare',
+                money(detail.Fare.OriginalFare, detail.Fare.OriginalFareText),
+              ],
               ...(Number(detail.Fare.DiscountAmount) > 0
-                ? [[
-                    `Discount${detail.Fare.DiscountPercentage ? ` · ${detail.Fare.DiscountPercentage}%` : ''}`,
-                    `−${money(detail.Fare.DiscountAmount, detail.Fare.DiscountAmountText)}`,
-                  ]]
+                ? [
+                    [
+                      `Discount${
+                        detail.Fare.DiscountPercentage
+                          ? ` · ${detail.Fare.DiscountPercentage}%`
+                          : ''
+                      }`,
+                      `−${money(
+                        detail.Fare.DiscountAmount,
+                        detail.Fare.DiscountAmountText,
+                      )}`,
+                    ],
+                  ]
                 : []),
               ...(detail.Fare.SurgeApplied === 'YES'
-                ? [[
-                    `Surge${detail.Fare.SurgeMultiplier ? ` · ${detail.Fare.SurgeMultiplier}x` : ''}`,
-                    money(detail.Fare.SurgeAmount, detail.Fare.SurgeAmountText),
-                  ]]
+                ? [
+                    [
+                      `Surge${
+                        detail.Fare.SurgeMultiplier
+                          ? ` · ${detail.Fare.SurgeMultiplier}x`
+                          : ''
+                      }`,
+                      money(
+                        detail.Fare.SurgeAmount,
+                        detail.Fare.SurgeAmountText,
+                      ),
+                    ],
+                  ]
                 : []),
             ].map(([k, v]) => (
               <View key={k} style={styles.fareRow}>
-                <Text style={[styles.fareKey, k.startsWith('Discount') && { color: Colors.green }]}>{k}</Text>
-                <Text style={[styles.fareVal, k.startsWith('Discount') && { color: Colors.green }]}>{v}</Text>
+                <Text
+                  style={[
+                    styles.fareKey,
+                    k.startsWith('Discount') && { color: Colors.green },
+                  ]}
+                >
+                  {k}
+                </Text>
+                <Text
+                  style={[
+                    styles.fareVal,
+                    k.startsWith('Discount') && { color: Colors.green },
+                  ]}
+                >
+                  {v}
+                </Text>
               </View>
             ))}
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>
                 {isCompletedStatus(detail.Status) ? 'Total paid' : 'Total fare'}
               </Text>
-              <Text style={styles.totalVal}>{money(detail.Fare.FinalFare, detail.Fare.FinalFareText)}</Text>
+              <Text style={styles.totalVal}>
+                {money(detail.Fare.FinalFare, detail.Fare.FinalFareText)}
+              </Text>
             </View>
           </NCCard>
 
           {/* ── Actions ───────────────────────────────────────── */}
-          <NCCard style={styles.card}>
-            <Text style={styles.sectionLabel}>ACTIONS</Text>
-            {isCompletedStatus(detail.Status) && (
+          {isCompletedStatus(detail.Status) && (
+            <NCCard style={styles.card}>
+              <Text style={styles.sectionLabel}>ACTIONS</Text>
               <Row
                 icon="invoice"
                 title="Download invoice"
                 onPress={() => navigation.navigate('InvoiceReceipt')}
               />
-            )}
-            <Row
-              icon="chat"
-              title="Report an issue"
-              sub="Lost item, fare dispute"
-              onPress={() => navigation.navigate('SOS')}
-            />
-          </NCCard>
-
-          {/* ── Support ───────────────────────────────────────── */}
-          <NCCard style={styles.card}>
-            <Text style={styles.sectionLabel}>NEED HELP?</Text>
-            <Row
-              icon="chat"
-              title="Chat with NCRide support"
-              sub="Replies in 28 sec"
-              onPress={() => navigation.navigate('SOS')}
-            />
-          </NCCard>
+            </NCCard>
+          )}
         </ScrollView>
       )}
     </ScreenShell>
@@ -253,9 +296,25 @@ const styles = StyleSheet.create({
     paddingBottom: fscale(40),
   },
 
-  centerFill: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: fscale(10), paddingHorizontal: Spacing.screen * 2 },
-  centerText: { fontSize: fscale(13), color: Colors.textSecondary, textAlign: 'center' },
-  retryBtn: { marginTop: fscale(4), paddingHorizontal: fscale(20), paddingVertical: fscale(10), borderRadius: Radii.lg, backgroundColor: Colors.ink },
+  centerFill: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: fscale(10),
+    paddingHorizontal: Spacing.screen * 2,
+  },
+  centerText: {
+    fontSize: fscale(13),
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  retryBtn: {
+    marginTop: fscale(4),
+    paddingHorizontal: fscale(20),
+    paddingVertical: fscale(10),
+    borderRadius: Radii.lg,
+    backgroundColor: Colors.ink,
+  },
   retryText: { fontSize: fscale(13), fontWeight: '700', color: '#fff' },
 
   shareBtn: {

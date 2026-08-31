@@ -1,7 +1,10 @@
 # OSX
 #
 .DS_Store
-
+# === Secrets — never commit these ===
+.env
+.env.local
+.env.*.local
 # Xcode
 #
 build/

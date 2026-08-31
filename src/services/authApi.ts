@@ -16,11 +16,13 @@
 // encryption key exists — none of the above use it.
 
 import { encrypt, decryptJson, ENCRYPTION_ENABLED } from '../utils/crypto';
+import { API_BEARER_TOKEN as ENV_API_BEARER_TOKEN } from '@env';
 
 const BASE_URL = 'https://aloapp.shop/apiv1/customer/auth.asmx';
 
-// Same static app-auth bearer used across the auth.asmx endpoints.
-const API_BEARER_TOKEN = 'LrhTJugsRqEnefmaykA4wKNY';
+// Same static app-auth bearer used across the auth.asmx endpoints. Comes
+// from .env (see .env.example) — never hardcode a real token here.
+const API_BEARER_TOKEN = ENV_API_BEARER_TOKEN;
 
 const logInfo = (tag: string, detail: string) => {
   if (__DEV__) {

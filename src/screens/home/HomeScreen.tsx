@@ -352,13 +352,6 @@ const HomeScreen = ({ navigation }: Props) => {
             <TouchableOpacity
               style={styles.iconBtn}
               activeOpacity={0.7}
-              onPress={() => navigation.getParent()?.navigate('SOS' as never)}
-            >
-              <Icon name="sos" size={16} stroke={Colors.red} sw={1.7} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.iconBtn}
-              activeOpacity={0.7}
               onPress={() =>
                 navigation.getParent()?.navigate('Notifications' as never)
               }

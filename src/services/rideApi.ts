@@ -16,8 +16,11 @@
 const BASE_URL = 'https://aloapp.shop/apiv1/customer/customer-riderequest.asmx';
 const PATH = 'GetRideEstimate';
 
-// Same static app-auth bearer used across auth.asmx endpoints.
-const API_BEARER_TOKEN = 'LrhTJugsRqEnefmaykA4wKNY';
+import { API_BEARER_TOKEN as ENV_API_BEARER_TOKEN } from '@env';
+
+// Same static app-auth bearer used across auth.asmx endpoints. Comes from
+// .env (see .env.example) — never hardcode a real token here.
+const API_BEARER_TOKEN = ENV_API_BEARER_TOKEN;
 
 const logInfo = (tag: string, detail: string) => {
   if (__DEV__) console.log(`[rideApi] ${tag} → ${detail}`);

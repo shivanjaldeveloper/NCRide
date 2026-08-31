@@ -125,12 +125,6 @@ const SettingsScreen = ({ navigation }: Props) => {
 
         <Text style={styles.sectionLabel}>PRIVACY & SAFETY</Text>
         <NCCard pad={4} style={styles.card}>
-          <Row
-            icon="shield"
-            title="Trusted contacts"
-            sub="3 added"
-            onPress={() => navigation.navigate('SOS')}
-          />
           <Row icon="user" title="Data & privacy" onPress={() => {}} />
           <Row
             icon="trash"

@@ -33,7 +33,6 @@ import RewardsScreen from '../screens/wallet/RewardsScreen';
 import NotificationsScreen from '../screens/wallet/NotificationsScreen';
 import SavedPlacesScreen from '../screens/profile/SavedPlacesScreen';
 import ReferralsScreen from '../screens/profile/ReferralsScreen';
-import PaymentMethodsScreen from '../screens/profile/PaymentMethodsScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
 import LogoutScreen from '../screens/profile/LogoutScreen';
 
@@ -179,11 +178,6 @@ const AppNavigator = () => (
       <Stack.Screen
         name="Referrals"
         component={ReferralsScreen}
-        options={{ animation: 'slide_from_right', gestureEnabled: true }}
-      />
-      <Stack.Screen
-        name="PaymentMethods"
-        component={PaymentMethodsScreen}
         options={{ animation: 'slide_from_right', gestureEnabled: true }}
       />
       <Stack.Screen

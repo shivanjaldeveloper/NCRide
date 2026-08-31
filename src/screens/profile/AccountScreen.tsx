@@ -134,12 +134,6 @@ const AccountScreen = ({ navigation }: Props) => {
             onPress={() => navigation.navigate('Wallet')}
           />
           <Row
-            icon="card"
-            title={t.account.paymentMethods}
-            sub={t.account.paymentMethodsSub}
-            onPress={() => go('PaymentMethods')}
-          />
-          <Row
             icon="coupon"
             title={t.account.coupons}
             sub={t.account.couponsSub}
@@ -173,17 +167,6 @@ const AccountScreen = ({ navigation }: Props) => {
         </NCCard>
 
         <NCCard pad={4} style={styles.menuCard}>
-          <Row
-            icon="chat"
-            title={t.account.helpSupport}
-            onPress={() => go('SOS')}
-          />
-          <Row
-            icon="sos"
-            title={t.account.sosContacts}
-            sub={t.account.sosContactsSub}
-            onPress={() => go('SOS')}
-          />
           <Row
             icon="settings"
             title={t.account.settings}
